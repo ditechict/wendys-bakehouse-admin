@@ -13,12 +13,13 @@ import {
   adminListProducts,
   adminSaveProduct,
 } from "@/lib/admin.functions";
-import { isCustomCakeProduct } from "@/lib/custom-cake-contract";
+import { CUSTOM_CAKE_PRODUCT_ID, isCustomCakeProduct } from "@/lib/custom-cake-contract";
 import { isCakeDesignProduct } from "@/lib/cake-designs";
 import { SmartImage } from "@/components/site/SmartImage";
 import { formatMoney, imageSrc } from "@/lib/shop";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminProductOptions } from "@/components/admin/AdminProductOptions";
+import { AdminPricing } from "@/components/admin/AdminPricing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -127,6 +128,7 @@ export function AdminProducts() {
   });
 
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [pricingOpen, setPricingOpen] = useState(false);
   const [cropTop, setCropTop] = useState(0);
   const [cropBottom, setCropBottom] = useState(0);
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
@@ -150,6 +152,7 @@ export function AdminProducts() {
   };
 
   const openEditor = (product?: ProductRow) => {
+    setPricingOpen(false);
     clearPendingImage();
     if (unsavedImagePath) {
       discardUpload(unsavedImagePath);
@@ -159,6 +162,7 @@ export function AdminProducts() {
   };
 
   const closeEditor = (shouldDiscardUpload = true) => {
+    setPricingOpen(false);
     clearPendingImage();
     if (shouldDiscardUpload && unsavedImagePath) {
       discardUpload(unsavedImagePath);
@@ -456,9 +460,9 @@ export function AdminProducts() {
                 </Field>
                 {isCakeDesignProduct(draft.id ?? "", draft.category_id) && (
                   <p className="text-sm">
-                    This design uses the Custom celebration cake configurator. Edit its prices and
-                    deposit in Admin → Pricing → Custom celebration cake; edit this design’s name,
-                    description and photograph here.
+                    This design uses the shared Custom celebration cake configurator. Edit its name,
+                    description and photograph here. Use Edit pricing below for the shared prices,
+                    minimums, deposit and paid extras.
                   </p>
                 )}
                 {!isCakeDesignProduct(draft.id ?? "", draft.category_id) && (
@@ -488,7 +492,8 @@ export function AdminProducts() {
                     )}
                     {draft.id && (
                       <p className="text-sm">
-                        Edit existing prices, minimums and deposits in Admin → Pricing.
+                        Edit prices, minimums and deposits in the pricing section below. Product
+                        details and pricing are saved separately.
                       </p>
                     )}
                     <div className="grid grid-cols-2 gap-4">
@@ -576,7 +581,7 @@ export function AdminProducts() {
                       <img
                         src={imagePreview}
                         alt={draft.name ? `${draft.name} preview` : "Product preview"}
-                        className="aspect-[4/3] w-full rounded-[0.7rem] bg-secondary object-contain"
+                        className="aspect-[4/3] w-full rounded-[0.7rem] bg-white object-contain"
                       />
                     ) : (
                       <div className="flex aspect-[4/3] items-center justify-center rounded-[0.7rem] bg-secondary text-sm text-muted-foreground">
@@ -693,6 +698,31 @@ export function AdminProducts() {
                   {save.isPending ? "Saving…" : "Save product"}
                 </Button>
               </form>
+              {(draft.id || isCakeDesignProduct("", draft.category_id)) && (
+                <div className="space-y-4 rounded-lg border border-border bg-card p-4">
+                  <h3 className="font-display text-xl">Product pricing</h3>
+                  {isCakeDesignProduct(draft.id ?? "", draft.category_id) && (
+                    <p className="text-sm text-muted-foreground">
+                      Shared custom-cake pricing: changes here affect every design using the
+                      Custom celebration cake configurator. This does not set a separate price for
+                      this photograph. Design costs must use the supported paid extras.
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Save product details with Save product above. Review and save pricing separately
+                    below; saving one section does not save changes in the other.
+                  </p>
+                  <Button type="button" variant="outline" onClick={() => setPricingOpen(!pricingOpen)}>
+                    {pricingOpen ? "Close pricing editor" : "Edit pricing"}
+                  </Button>
+                  {pricingOpen && (
+                    <AdminPricing
+                      productId={isCakeDesignProduct(draft.id ?? "", draft.category_id)
+                        ? CUSTOM_CAKE_PRODUCT_ID : draft.id}
+                    />
+                  )}
+                </div>
+              )}
             </>
           )}
         </DialogContent>

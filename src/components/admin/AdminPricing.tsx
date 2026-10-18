@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { getAdminPricing, saveAdminPricing } from "@/lib/admin-pricing.functions";
 import { isCustomCakeProduct } from "@/lib/custom-cake-contract";
@@ -12,7 +12,7 @@ function cents(value: string) {
     throw new Error("Enter a valid CAD amount with at most two decimal places.");
   return Math.round(Number(value) * 100);
 }
-export function AdminPricing() {
+export function AdminPricing({ productId }: { productId?: string | undefined } = {}) {
   const queryClient = useQueryClient();
   const query = useQuery({ queryKey: ["admin-pricing"], queryFn: () => getAdminPricing() });
   const [id, setId] = useState("");
@@ -43,6 +43,9 @@ export function AdminPricing() {
       ),
     });
   }
+  useEffect(() => {
+    if (productId && query.data && id !== productId) choose(productId);
+  }, [productId, query.data, id]);
   async function save() {
     if (!product) return;
     setBusy(true);
@@ -101,7 +104,9 @@ export function AdminPricing() {
         One pricing source for product pages and the public Pricing page. Review all changes before
         saving; concurrent edits require a reload.
       </p>
-      <label className="block">
+      {productId ? (
+        <p className="text-sm font-medium">Editing prices for {product?.name ?? "this product"}</p>
+      ) : <label className="block">
         Product
         <select
           aria-label="Product"
@@ -128,7 +133,7 @@ export function AdminPricing() {
               </option>
             ))}
         </select>
-      </label>
+      </label>}
       {product && (
         <form
           className="space-y-5"

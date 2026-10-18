@@ -12,7 +12,7 @@ import { catalogQueryOptions } from "@/lib/shop";
 
 const TITLE = "Cakes & treats — Wendy's Bakehouse, Toronto";
 const DESC =
-  "Browse made-to-order celebration cakes and cupcakes. Prices in CAD, pickup in Etobicoke, Toronto.";
+  "Browse made-to-order celebration cakes and cupcakes. Open a cake to view pricing and customization options. Pickup in Etobicoke, Toronto.";
 
 type Search = { category?: string };
 
@@ -47,8 +47,8 @@ function MenuPage() {
     <>
       <PageHeader
         eyebrow="Cakes & treats"
-        title="The whole menu, with the prices written down."
-        lead="Custom celebration cakes and cupcakes. Every price is written down — choose the size and finish and your total is worked out for you."
+        title="Find the cake for your celebration."
+        lead="Browse custom celebration cakes and cupcakes. Open a cake to see its pricing, sizes and design options."
       />
 
       <Section>
@@ -95,8 +95,8 @@ function MenuPage() {
         )}
 
         <p className="mt-10 max-w-[70ch] text-sm text-muted-foreground">
-          Prices shown in CAD. Custom cake sizes, tiers and design extras are priced on the product
-          page. Fondant figures and sculpted models are not offered.
+          Open a product to see prices in CAD and explore sizes, tiers and design extras.
+          Fondant figures and sculpted models are not offered.
         </p>
       </Section>
 

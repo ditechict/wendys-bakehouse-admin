@@ -57,10 +57,7 @@ export function SiteHeader() {
                 {...(item.to === "/menu" ? { search: { category: item.category } } : {})}
                 className="rounded-lg px-3 py-2.5 text-sm font-medium text-foreground/80 transition-colors hover:bg-secondary/60 hover:text-primary"
                 activeProps={{ className: "bg-secondary text-primary", "aria-current": "page" }}
-                activeOptions={{
-                  exact: true,
-                  ...(item.to === "/menu" ? { includeSearch: true, explicitUndefined: true } : {}),
-                }}
+                activeOptions={{ exact: true, includeSearch: false }}
               >
                 {item.label}
               </Link>
@@ -143,7 +140,7 @@ export function SiteHeader() {
                 onClick={() => setOpen(false)}
                 className="rounded-xl px-4 py-3 font-display text-2xl text-foreground transition-colors hover:bg-secondary/60"
                 activeProps={{ className: "bg-secondary text-primary", "aria-current": "page" }}
-                activeOptions={{ exact: true }}
+                activeOptions={{ exact: true, includeSearch: false }}
               >
                 {item.label}
               </Link>

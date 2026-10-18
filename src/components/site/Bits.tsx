@@ -2,7 +2,7 @@ import { useShopContact } from "@/lib/use-shop-contact";
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { MessageCircle } from "lucide-react";
-import { imageSrc, priceLabel, type ShopProduct } from "@/lib/shop";
+import { imageSrc, type ShopProduct } from "@/lib/shop";
 import { SmartImage } from "@/components/site/SmartImage";
 import { CUSTOM_CAKE_COVER_IMAGE, isCustomCakeProduct } from "@/lib/custom-cake-contract";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -84,7 +84,6 @@ export function ProductCard({ product }: { product: ShopProduct }) {
             {product.name}
           </Link>
         </h3>
-        <p className="mt-2 font-display text-lg text-gold">{priceLabel(product)}</p>
         <p className="mt-2 text-sm text-muted-foreground">{product.short}</p>
         <p className="eyebrow mt-4 text-[11px] text-muted-foreground">{product.lead_time}</p>
       </div>
