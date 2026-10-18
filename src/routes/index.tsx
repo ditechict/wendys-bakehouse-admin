@@ -1,9 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { Clock, CupSoda, MapPin, ShieldCheck, Sparkles } from "lucide-react";
-import heroArtwork from "@/assets/hero.jpg";
+import { Clock, MapPin, ShieldCheck, Sparkles } from "lucide-react";
 import { BUSINESS } from "@/data/catalog";
-import { CustomCakeMontage, CustomCakeTile } from "@/components/site/CakeArtwork";
+import { CustomCakeMontage } from "@/components/site/CakeArtwork";
+import { CatalogNotice } from "@/components/site/CatalogNotice";
+import {
+  CUSTOM_CAKE_PRODUCT_SLUG,
+  CUSTOM_CAKE_COVER_IMAGE,
+  isCustomCakeCategory,
+} from "@/lib/custom-cake-contract";
 import { TestimonialSlider } from "@/components/site/TestimonialSlider";
 import {
   CtaBand,
@@ -13,13 +18,16 @@ import {
   Section,
 } from "@/components/site/Bits";
 import { SmartImage } from "@/components/site/SmartImage";
-import { catalogQueryOptions, categoryImage, formatMoney, packLabel } from "@/lib/shop";
+import { catalogQueryOptions, categoryImage, imageSrc } from "@/lib/shop";
 
 const TITLE = "Wendy's Bakehouse — Custom Cakes in Toronto & Etobicoke";
 const DESC =
-  "Toronto celebration cakes with a Naija heart. Custom cake bases from $70, cupcakes from $35, pastries, drinks and cake loaves for pickup in Etobicoke.";
+  "Made-to-order celebration cakes in Toronto. Custom cakes and cupcakes for pickup in Etobicoke.";
 
 export const Route = createFileRoute("/")({
+  // A catalogue outage must not replace the original hero with an error page.
+  loader: ({ context }) =>
+    context.queryClient.ensureQueryData(catalogQueryOptions).catch(() => undefined),
   head: () => ({
     meta: [
       { title: TITLE },
@@ -57,34 +65,28 @@ const STEPS = [
 ];
 
 function Index() {
-  const { data, isPending } = useQuery(catalogQueryOptions);
+  const { data, isPending, isError, isFetching, refetch } = useQuery(catalogQueryOptions);
   const products = data?.products ?? [];
   const categories = data?.categories ?? [];
   const signature = products.slice(0, 4);
 
   return (
     <>
-      <section className="relative bg-cocoa text-cocoa-foreground">
-        <div className="mx-auto grid max-w-[1200px] gap-10 px-5 py-14 md:grid-cols-12 md:items-center md:py-20">
-          <div className="relative md:order-2 md:col-span-6">
-            <div className="relative mx-auto w-full max-w-[496px]">
-              <div
-                className="absolute -inset-2 rounded-[1.65rem] border border-gold/35 bg-cocoa-blush/15 blur-sm"
-                aria-hidden="true"
-              />
-              <img
-                src={heroArtwork}
-                alt="Wendy's Bakehouse custom celebration cake"
-                className="relative aspect-[5/4] w-full rounded-[1.35rem] border border-gold/45 object-cover shadow-2xl"
-              />
-            </div>
+      <section className="relative bg-background text-foreground">
+        <div className="mx-auto grid max-w-[1200px] gap-10 px-5 py-14 md:min-h-[640px] md:grid-cols-12 md:items-center md:py-20">
+          <div className="relative -mx-5 -mt-14 md:absolute md:inset-y-0 md:right-0 md:mt-0 md:mx-0 md:w-[52%]">
+            <CustomCakeMontage
+              priority
+              ratio="aspect-[4/3] md:aspect-auto md:h-full"
+              className="hero-cake-montage"
+            />
           </div>
-          <div className="md:order-1 md:col-span-6">
-            <Eyebrow>Now booking {BUSINESS.bookingMonth}</Eyebrow>
+          <div className="relative z-10 md:order-1 md:col-span-6 md:pr-10">
+            <p className="eyebrow text-primary">Now booking {BUSINESS.bookingMonth}</p>
             <h1 className="mt-5 text-[2.5rem] leading-[1.03] md:text-6xl">
-              Toronto celebration cakes with a <span className="text-gold">Naija</span> heart.
+              Made-to-order <span className="text-primary">celebration cakes</span> in Toronto.
             </h1>
-            <p className="mt-6 max-w-[56ch] text-lg text-cocoa-foreground/75">
+            <p className="mt-6 max-w-[56ch] text-lg text-muted-foreground">
               Build your custom cake from a clear size-and-layer menu, then add only the design
               details you want. Every choice is priced upfront by a Certified Food Handler baking to
               order in Etobicoke.
@@ -94,25 +96,26 @@ function Index() {
                 to="/menu"
                 className="rounded-sm bg-primary px-6 py-3.5 text-sm font-semibold text-primary-foreground transition-colors hover:bg-primary/90"
               >
-                Start an order
+                Browse cakes
               </Link>
               <Link
-                to="/menu"
-                className="rounded-sm border border-cocoa-foreground/30 px-6 py-3.5 text-sm font-semibold transition-colors hover:border-gold hover:text-gold"
+                to="/menu/$slug"
+                params={{ slug: CUSTOM_CAKE_PRODUCT_SLUG }}
+                className="rounded-sm border border-border px-6 py-3.5 text-sm font-semibold transition-colors hover:border-primary hover:text-primary"
               >
-                Browse cakes &amp; treats
+                Customize your cake
               </Link>
             </div>
-            <ul className="mt-10 grid gap-4 border-t border-cocoa-foreground/15 pt-6 text-sm text-cocoa-foreground/75 sm:grid-cols-3">
+            <ul className="mt-10 grid gap-4 border-t border-border pt-6 text-sm text-muted-foreground sm:grid-cols-3">
               <li className="flex items-center gap-2">
-                <ShieldCheck className="h-4 w-4 text-gold" aria-hidden="true" /> Certified Food
+                <ShieldCheck className="h-4 w-4 text-bronze" aria-hidden="true" /> Certified Food
                 Handler
               </li>
               <li className="flex items-center gap-2">
-                <MapPin className="h-4 w-4 text-gold" aria-hidden="true" /> Pickup in Etobicoke
+                <MapPin className="h-4 w-4 text-bronze" aria-hidden="true" /> Pickup in Etobicoke
               </li>
               <li className="flex items-center gap-2">
-                <Sparkles className="h-4 w-4 text-gold" aria-hidden="true" /> Cupcakes from $35
+                <Sparkles className="h-4 w-4 text-bronze" aria-hidden="true" /> Baked to order
               </li>
             </ul>
           </div>
@@ -121,8 +124,17 @@ function Index() {
 
       <Section>
         <Eyebrow>Shop by collection</Eyebrow>
-        <h2 className="mt-4 text-3xl md:text-4xl">Five collections, one kitchen.</h2>
-        <div className="mt-10 grid gap-6 sm:grid-cols-2">
+        <h2 className="mt-4 text-3xl md:text-4xl">Celebration cakes and cupcakes.</h2>
+        {(isError || (!isPending && categories.length === 0)) && (
+          <CatalogNotice
+            retry={() => void refetch()}
+            busy={isFetching}
+            cached={categories.length > 0}
+            empty={!isError}
+          />
+        )}
+        <div className="mt-10 grid gap-6 sm:grid-cols-2" aria-busy={isPending}>
+          {isPending && Array.from({ length: 2 }).map((_, i) => <ProductCardSkeleton key={i} />)}
           {categories.map((c) => (
             <Link
               key={c.id}
@@ -130,69 +142,28 @@ function Index() {
               search={{ category: c.slug }}
               className="group overflow-hidden rounded-[1.5rem] border border-border bg-card p-2"
             >
-              {c.slug === "celebration-cakes" ? (
-                <CustomCakeMontage className="transition-transform duration-300 group-hover:scale-[1.03]" />
-              ) : c.slug === "drinks" ? (
-                <CustomCakeTile
-                  label={c.name}
-                  icon={CupSoda}
-                  description="Ask about today's available drinks"
-                  className="transition-transform duration-300 group-hover:scale-[1.03]"
-                  ratio="aspect-[4/3]"
-                />
-              ) : (
-                <SmartImage
-                  src={categoryImage(c, products)}
-                  alt={c.name}
-                  ratio="aspect-[4/3]"
-                  className="transition-transform duration-300 group-hover:scale-[1.03]"
-                />
-              )}
+              <SmartImage
+                src={
+                  isCustomCakeCategory(c.id) || c.slug === "celebration-cakes"
+                    ? imageSrc(c) || CUSTOM_CAKE_COVER_IMAGE
+                    : categoryImage(c, products)
+                }
+                alt={
+                  isCustomCakeCategory(c.id) || c.slug === "celebration-cakes"
+                    ? "Custom ivory cake with pink flowers and gold details"
+                    : c.name
+                }
+                ratio="aspect-[4/3]"
+                fit="contain"
+                background="white"
+                className="transition-transform duration-300 group-hover:scale-[1.03]"
+              />
               <div className="p-5">
                 <h3 className="font-display text-xl group-hover:text-primary">{c.name}</h3>
                 <p className="mt-2 text-sm text-muted-foreground">{c.blurb}</p>
               </div>
             </Link>
           ))}
-        </div>
-      </Section>
-
-      <Section tone="sand">
-        <div className="grid gap-10 md:grid-cols-12">
-          <div className="md:col-span-5">
-            <Eyebrow>Prices at a glance</Eyebrow>
-            <h2 className="mt-4 text-3xl md:text-4xl">Every price, in plain sight.</h2>
-            <p className="mt-5 max-w-[46ch] text-muted-foreground">
-              These are the real prices you pay, in CAD. Sizes and finishes that cost more are
-              listed with exactly how much they add, so nothing is a surprise at checkout.
-            </p>
-            <Link
-              to="/pricing"
-              className="mt-6 inline-block border-b-2 border-gold pb-1 text-sm font-semibold"
-            >
-              Full pricing &amp; lead times
-            </Link>
-          </div>
-          <div className="md:col-span-7">
-            <dl className="divide-y divide-border border-y border-border">
-              {products
-                .filter((p) => p.available && p.price_cents != null)
-                .slice(0, 8)
-                .map((p) => (
-                  <div key={p.slug} className="flex items-baseline justify-between gap-6 py-4">
-                    <dt className="text-sm md:text-base">
-                      {p.name}
-                      {packLabel(p) && (
-                        <span className="block text-xs text-muted-foreground">{packLabel(p)}</span>
-                      )}
-                    </dt>
-                    <dd className="shrink-0 font-display text-lg text-gold">
-                      {formatMoney(p.price_cents)}
-                    </dd>
-                  </div>
-                ))}
-            </dl>
-          </div>
         </div>
       </Section>
 
@@ -242,13 +213,21 @@ function Index() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div>
             <Eyebrow>Signature bakes</Eyebrow>
-            <h2 className="mt-4 text-3xl md:text-4xl">Most-ordered this season.</h2>
+            <h2 className="mt-4 text-3xl md:text-4xl">Featured cakes</h2>
           </div>
           <Link to="/menu" className="border-b-2 border-gold pb-1 text-sm font-semibold">
             View the whole menu
           </Link>
         </div>
-        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+        {(isError || (!isPending && products.length === 0)) && (
+          <CatalogNotice
+            retry={() => void refetch()}
+            busy={isFetching}
+            cached={products.length > 0}
+            empty={!isError}
+          />
+        )}
+        <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-4" aria-busy={isPending}>
           {isPending
             ? Array.from({ length: 4 }).map((_, i) => <ProductCardSkeleton key={i} />)
             : signature.map((p) => <ProductCard key={p.slug} product={p} />)}

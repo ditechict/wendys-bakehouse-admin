@@ -1,3 +1,4 @@
+import { useShopContact } from "@/lib/use-shop-contact";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   AtSign,
@@ -45,6 +46,7 @@ const SOCIALS = [
 ];
 
 function PoliciesPage() {
+  const contact = useShopContact();
   return (
     <>
       <PageHeader
@@ -145,20 +147,20 @@ function PoliciesPage() {
               </p>
               <div className="mt-6 grid gap-3">
                 <a
-                  href={`tel:+${BUSINESS.phoneE164}`}
+                  href={`tel:+${contact.phoneE164}`}
                   className="flex items-center gap-3 rounded-sm border border-border bg-card p-4 text-sm font-semibold"
                 >
                   <Phone className="h-4 w-4 text-gold" aria-hidden="true" />
-                  {BUSINESS.phoneDisplay}
+                  {contact.phoneDisplay}
                 </a>
                 <a
-                  href={BUSINESS.whatsapp}
+                  href={contact.whatsapp}
                   target="_blank"
                   rel="noreferrer noopener"
                   className="flex items-center gap-3 rounded-sm border border-border bg-card p-4 text-sm font-semibold"
                 >
                   <MessageCircle className="h-4 w-4 text-gold" aria-hidden="true" />
-                  WhatsApp
+                  Chat with Wendy
                 </a>
               </div>
 

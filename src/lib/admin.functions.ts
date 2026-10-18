@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import type { AppDatabase } from "@/lib/database.types";
 import { z } from "zod";
+import { isCakeDesignProduct } from "./cake-designs";
 
 type Ctx = { supabase: unknown; userId: string };
 
@@ -45,6 +46,11 @@ async function deleteUnreferencedProductImage(
     .select("id", { count: "exact", head: true })
     .eq("image_url", imageUrl);
   if (error || count !== 0) return;
+  const categoryReferences = await db
+    .from("categories")
+    .select("id", { count: "exact", head: true })
+    .eq("image_url", imageUrl);
+  if (categoryReferences.error || categoryReferences.count !== 0) return;
   await db.storage.from("product-images").remove([imageUrl.slice("storage:".length)]);
 }
 
@@ -55,6 +61,7 @@ import {
   nextPaymentStatuses,
 } from "@/lib/order-status";
 import {
+  CUSTOM_CAKE_PRODUCT_SLUG,
   customCakeRuleGroup,
   isCustomCakeCategory,
   isCustomCakeOptionGroup,
@@ -275,7 +282,8 @@ const productSchema = z
     sort_order: z.number().int().min(0).max(9999),
   })
   .superRefine((v, ctx) => {
-    if (v.price_cents == null) {
+    if (isCakeDesignProduct(v.id ?? "", v.category_id)) return;
+    if (v.price_cents == null && !isCakeDesignProduct(v.id ?? "", v.category_id)) {
       ctx.addIssue({
         code: "custom",
         message: "Every product needs a published price.",
@@ -295,7 +303,7 @@ const productSchema = z
     if (v.pack_size != null && !v.pack_unit) {
       ctx.addIssue({
         code: "custom",
-        message: 'Say what the pack contains, for example "pies".',
+        message: 'Say what the pack contains, for example "cupcakes".',
         path: ["pack_unit"],
       });
     }
@@ -308,24 +316,36 @@ export const adminSaveProduct = createServerFn({ method: "POST" })
     await assertStaff(context);
     const isCanonicalCake = data.id ? isCustomCakeProduct(data.id) : false;
     if (isCanonicalCake) {
+      if (data.slug !== CUSTOM_CAKE_PRODUCT_SLUG)
+        throw new Error("Keep the main custom-cake web address unchanged.");
       if (data.payment_rule !== "deposit") {
         throw new Error("The custom celebration cake must use a percentage deposit.");
       }
       if (!data.category_id || !isCustomCakeCategory(data.category_id)) {
         throw new Error("The custom celebration cake must stay in the Custom cakes collection.");
       }
-    } else if (data.category_id && isCustomCakeCategory(data.category_id)) {
-      throw new Error("Only the custom celebration cake can live in the Custom cakes collection.");
+    } else if (isCakeDesignProduct(data.id ?? "", data.category_id)) {
+      if (!data.category_id || !isCustomCakeCategory(data.category_id)) {
+        throw new Error("Cake designs use the Custom cakes collection and its shared pricing.");
+      }
     }
     const db = await admin();
     let previousImageUrl: string | null = null;
     if (data.id) {
       const { data: current, error } = await db
         .from("products")
-        .select("image_url")
+        .select("image_url, category_id")
         .eq("id", data.id)
         .single();
       if (error) throw new Error(error.message);
+      if (
+        isCakeDesignProduct(data.id, current.category_id) !==
+        isCakeDesignProduct(data.id, data.category_id)
+      ) {
+        throw new Error(
+          "Keep this product in its current pricing collection. Create a new design instead of changing its pricing type.",
+        );
+      }
       previousImageUrl = current.image_url;
     }
 
@@ -337,7 +357,7 @@ export const adminSaveProduct = createServerFn({ method: "POST" })
       description: data.description,
       payment_rule: data.payment_rule,
       pricing_mode: (data.payment_rule === "deposit" ? "deposit" : "fixed") as "fixed" | "deposit",
-      price_cents: data.price_cents,
+      price_cents: isCakeDesignProduct(data.id ?? "", data.category_id) ? null : data.price_cents,
       deposit_cents: null,
       deposit_percent: data.payment_rule === "deposit" ? data.deposit_percent : null,
       price_band: null,
@@ -353,7 +373,19 @@ export const adminSaveProduct = createServerFn({ method: "POST" })
     };
 
     if (data.id) {
-      const { error } = await db.from("products").update(row).eq("id", data.id);
+      const { error } = await db
+        .from("products")
+        .update(
+          (({
+            price_cents: _price,
+            deposit_cents: _deposit,
+            deposit_percent: _percent,
+            payment_rule: _rule,
+            pricing_mode: _mode,
+            ...metadata
+          }) => metadata)(row),
+        )
+        .eq("id", data.id);
       if (error) throw new Error(error.message);
       if (previousImageUrl !== data.image_url) {
         await deleteUnreferencedProductImage(db, previousImageUrl);
@@ -535,6 +567,8 @@ export const adminSaveCategory = createServerFn({ method: "POST" })
     await assertStaff(context);
     const db = await admin();
     const { id, ...row } = data;
+    if (id && isCustomCakeCategory(id) && data.slug !== "celebration-cakes")
+      throw new Error("Keep the Custom cakes collection web address unchanged.");
     if (id) {
       const { error } = await db.from("categories").update(row).eq("id", id);
       if (error) throw new Error(error.message);
@@ -771,7 +805,6 @@ export const adminSaveOptionChoice = createServerFn({ method: "POST" })
         .from("product_option_choices")
         .update({
           label: row.label,
-          price_delta_cents: row.price_delta_cents,
           available: row.available,
           sort_order: row.sort_order,
         })

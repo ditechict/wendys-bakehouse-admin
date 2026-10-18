@@ -1,0 +1,152 @@
+[
+  {
+    "slug": "racing-adventure-cake",
+    "source": "PHOTO-2026-07-06-23-01-03 8.jpg",
+    "crop": [
+      0,
+      246,
+      591,
+      1034
+    ],
+    "size": [
+      591,
+      788
+    ],
+    "sha256": "66830896e753d8797e1827055a052c876b19184ad2756856a307a1e8d2fc41ac"
+  },
+  {
+    "slug": "wild-one-safari-cake",
+    "source": "PHOTO-2026-07-06-23-01-03 10.jpg",
+    "crop": [
+      0,
+      246,
+      591,
+      1034
+    ],
+    "size": [
+      591,
+      788
+    ],
+    "sha256": "4693155a5731bf3e6f304a63306df3cfa0393299e01a3c92168f3a6db0a16a0f"
+  },
+  {
+    "slug": "pink-ranger-celebration-cake",
+    "source": "PHOTO-2026-07-06-23-01-03 6.jpg",
+    "crop": [
+      0,
+      246,
+      591,
+      1034
+    ],
+    "size": [
+      591,
+      788
+    ],
+    "sha256": "f5b708358232a5558c953b9a01391b0fafb758ffe225610788e4e0aca6417451"
+  },
+  {
+    "slug": "black-and-gold-graduation-cake",
+    "source": "PHOTO-2026-07-06-23-01-03 9.jpg",
+    "crop": [
+      0,
+      246,
+      591,
+      1034
+    ],
+    "size": [
+      591,
+      788
+    ],
+    "sha256": "d0d7405c496635acb2a9c3ae7522d540f14b159528cbd4fc8edae5578f2fb9f8"
+  },
+  {
+    "slug": "royal-blue-golden-celebration-cake",
+    "source": "PHOTO-2026-07-06-23-01-04.jpg",
+    "crop": [
+      0,
+      271,
+      591,
+      1010
+    ],
+    "size": [
+      591,
+      739
+    ],
+    "sha256": "3daf042c87407b5aecc4dc18f5b80805d53fb5e6ebf4763df490778af753ce7a"
+  },
+  {
+    "slug": "lilac-butterfly-cake",
+    "source": "PHOTO-2026-07-06-23-01-04 2.jpg",
+    "crop": [
+      0,
+      271,
+      591,
+      1010
+    ],
+    "size": [
+      591,
+      739
+    ],
+    "sha256": "5c3b99f27f60b32a2389fac764fd0956f32f0d9e0d487d45c89240c02a5a4313"
+  },
+  {
+    "slug": "ivory-and-pink-floral-cake",
+    "source": "PHOTO-2026-07-06-23-01-04 3.jpg",
+    "crop": [
+      0,
+      271,
+      591,
+      1010
+    ],
+    "size": [
+      591,
+      739
+    ],
+    "sha256": "459ff7fec3bf6d86b80d706910d966d4aab1b50c3a2de2a3e2ec87bbe2df59c4"
+  },
+  {
+    "slug": "pink-rose-ombre-cake",
+    "source": "PHOTO-2026-07-06-23-01-04 4.jpg",
+    "crop": [
+      0,
+      271,
+      591,
+      1010
+    ],
+    "size": [
+      591,
+      739
+    ],
+    "sha256": "863a7f5e5edd2739d18776ec429fb553980d639d5077a0a5e176f25aa67f2419"
+  },
+  {
+    "slug": "monochrome-fan-celebration-cake",
+    "source": "PHOTO-2026-07-06-23-01-04 5.jpg",
+    "crop": [
+      0,
+      246,
+      591,
+      1034
+    ],
+    "size": [
+      591,
+      788
+    ],
+    "sha256": "17ea1487b1e0722e4d5b96c1ce5b5afd3d666b2105a8a10aa82f5cba0b1585cb"
+  },
+  {
+    "slug": "tropical-getaway-cake",
+    "source": "PHOTO-2026-07-06-23-01-04 7.jpg",
+    "crop": [
+      0,
+      246,
+      591,
+      1034
+    ],
+    "size": [
+      591,
+      788
+    ],
+    "sha256": "058d3de803631e9f898dad81e4db9315ceee5dd56ecf4bd844af23fac828fa28"
+  }
+]

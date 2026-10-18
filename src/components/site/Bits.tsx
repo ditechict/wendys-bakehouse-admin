@@ -1,11 +1,10 @@
+import { useShopContact } from "@/lib/use-shop-contact";
 import type { ReactNode } from "react";
 import { Link } from "@tanstack/react-router";
 import { MessageCircle } from "lucide-react";
-import { BUSINESS } from "@/data/catalog";
 import { imageSrc, priceLabel, type ShopProduct } from "@/lib/shop";
 import { SmartImage } from "@/components/site/SmartImage";
-import { CustomCakeTile } from "@/components/site/CakeArtwork";
-import { isCustomCakeProduct } from "@/lib/custom-cake-contract";
+import { CUSTOM_CAKE_COVER_IMAGE, isCustomCakeProduct } from "@/lib/custom-cake-contract";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function Section({
@@ -58,20 +57,26 @@ export function ProductCard({ product }: { product: ShopProduct }) {
       <Link
         to="/menu/$slug"
         params={{ slug: product.slug }}
-        className="block overflow-hidden rounded-[1.5rem] p-2"
+        className="block overflow-hidden rounded-[1.5rem] bg-white p-2"
         tabIndex={-1}
         aria-hidden="true"
       >
-        {isCustomCakeProduct(product.id) ? (
-          <CustomCakeTile className="transition-transform duration-300 group-hover:scale-[1.03]" />
-        ) : (
-          <SmartImage
-            src={imageSrc(product)}
-            alt={product.name}
-            ratio="aspect-square"
-            className="transition-transform duration-300 group-hover:scale-[1.03]"
-          />
-        )}
+        <SmartImage
+          src={
+            isCustomCakeProduct(product.id)
+              ? imageSrc(product) || CUSTOM_CAKE_COVER_IMAGE
+              : imageSrc(product)
+          }
+          alt={
+            isCustomCakeProduct(product.id)
+              ? "Example of a custom celebration cake by Wendy’s Bakehouse"
+              : product.name
+          }
+          background="white"
+          ratio="aspect-square"
+          fit="contain"
+          className="transition-transform duration-300 group-hover:scale-[1.03]"
+        />
       </Link>
       <div className="flex flex-1 flex-col p-5">
         <h3 className="font-display text-xl">
@@ -103,6 +108,7 @@ export function ProductCardSkeleton() {
   );
 }
 export function CtaBand() {
+  const contact = useShopContact();
   return (
     <section className="bg-primary text-primary-foreground">
       <div className="mx-auto flex max-w-[1200px] flex-col gap-6 px-5 py-14 md:flex-row md:items-center md:justify-between">
@@ -121,13 +127,13 @@ export function CtaBand() {
             Start an order
           </Link>
           <a
-            href={BUSINESS.whatsapp}
+            href={contact.whatsapp}
             target="_blank"
             rel="noreferrer noopener"
             className="inline-flex items-center gap-2 rounded-sm border border-primary-foreground/40 px-5 py-3 text-sm font-semibold"
           >
             <MessageCircle className="h-4 w-4" aria-hidden="true" />
-            WhatsApp
+            Chat with Wendy
           </a>
         </div>
       </div>

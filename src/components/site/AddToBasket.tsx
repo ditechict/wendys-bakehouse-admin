@@ -4,11 +4,11 @@ import { Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { ShoppingBag } from "lucide-react";
 import { toast } from "sonner";
-import { catalogQueryOptions, formatMoney, packLabel } from "@/lib/shop";
+import { catalogQueryOptions, formatMoney, packLabel, type ShopProduct } from "@/lib/shop";
 import { useCart } from "@/lib/cart";
 import { previewCart } from "@/lib/orders.functions";
 
-export function AddToBasket({ slug }: { slug: string }) {
+export function AddToBasket({ slug, design }: { slug: string; design?: ShopProduct | undefined }) {
   const { data } = useQuery(catalogQueryOptions);
   const preview = useServerFn(previewCart);
   const { add } = useCart();
@@ -69,7 +69,9 @@ export function AddToBasket({ slug }: { slug: string }) {
     <div className="rounded-[1.5rem] border border-border bg-secondary p-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <p className="font-display text-2xl text-gold">
-          {line ? formatMoney(line.unit_total_cents) : `From ${formatMoney(product.price_cents)}`}
+          {line
+            ? formatMoney(line.unit_total_cents)
+            : `From ${formatMoney(product.starting_price_cents)}`}
         </p>
         {pack && <p className="text-sm text-muted-foreground">{pack}</p>}
         {isDeposit && (
@@ -212,6 +214,12 @@ export function AddToBasket({ slug }: { slug: string }) {
               options: labels,
               image_key: product.image_key,
               image_url: product.image_url,
+              ...(design
+                ? {
+                    image_url: design.image_url,
+                    notes: `Design reference: ${design.name} (${design.slug}). Decorations depend on selected options.`,
+                  }
+                : {}),
             });
             toast.success(`${product.name} added to your basket.`);
           }}

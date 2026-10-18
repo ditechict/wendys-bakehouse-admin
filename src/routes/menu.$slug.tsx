@@ -1,11 +1,14 @@
+import { useShopContact } from "@/lib/use-shop-contact";
+import { CatalogRouteError } from "@/components/site/CatalogNotice";
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
 import { Check, MessageCircle } from "lucide-react";
-import { BUSINESS } from "@/data/catalog";
 import { CtaBand, ProductCard, Section } from "@/components/site/Bits";
 import { AddToBasket } from "@/components/site/AddToBasket";
 import { SmartImage } from "@/components/site/SmartImage";
 import { CakeGallery } from "@/components/site/CakeArtwork";
 import { isCustomCakeProduct } from "@/lib/custom-cake-contract";
+import { CUSTOM_CAKE_PRODUCT_SLUG, CUSTOM_CAKE_COVER_IMAGE } from "@/lib/custom-cake-contract";
+import { isCakeDesignProduct } from "@/lib/cake-designs";
 import { catalogQueryOptions, imageSrc, priceLabel, type ShopProduct } from "@/lib/shop";
 
 import {
@@ -16,6 +19,10 @@ import {
 } from "@/components/ui/accordion";
 
 export const Route = createFileRoute("/menu/$slug")({
+  validateSearch: (search: Record<string, unknown>): { design?: string } => {
+    const design = search["design"];
+    return typeof design === "string" && /^[a-z0-9-]{2,120}$/.test(design) ? { design } : {};
+  },
   loader: async ({ params, context }) => {
     const catalog = await context.queryClient.ensureQueryData(catalogQueryOptions);
     const product = catalog.products.find((p) => p.slug === params.slug);
@@ -23,7 +30,11 @@ export const Route = createFileRoute("/menu/$slug")({
     const related = catalog.products
       .filter((p) => p.category_id === product.category_id && p.slug !== product.slug)
       .slice(0, 3);
-    return { product, related };
+    return {
+      product,
+      related,
+      designs: catalog.products.filter((p) => isCakeDesignProduct(p.id, p.category_id)),
+    };
   },
   head: ({ loaderData }) => {
     if (!loaderData) {
@@ -45,6 +56,7 @@ export const Route = createFileRoute("/menu/$slug")({
       ],
     };
   },
+  errorComponent: CatalogRouteError,
   notFoundComponent: ProductNotFound,
   component: ProductPage,
 });
@@ -68,10 +80,17 @@ function ProductNotFound() {
 }
 
 function ProductPage() {
-  const { product, related } = Route.useLoaderData() as {
+  const contact = useShopContact();
+  const { product, related, designs } = Route.useLoaderData() as {
     product: ShopProduct;
     related: ShopProduct[];
+    designs: ShopProduct[];
   };
+  const search = Route.useSearch();
+  const selectedDesign = isCustomCakeProduct(product.id)
+    ? designs.find((p) => p.slug === search.design)
+    : undefined;
+  const designListing = isCakeDesignProduct(product.id, product.category_id);
 
   const waText = encodeURIComponent(
     `Hi Wendy, I'd like to order: ${product.name} (${priceLabel(product)}). Could you confirm availability?`,
@@ -91,10 +110,25 @@ function ProductPage() {
         <div className="grid gap-10 py-10 md:grid-cols-12 md:py-14">
           <div className="md:col-span-6">
             <div className="md:sticky md:top-28">
-              {isCustomCakeProduct(product.id) ? (
-                <CakeGallery />
+              {selectedDesign ? (
+                <SmartImage
+                  background="white"
+                  src={imageSrc(selectedDesign)}
+                  alt={selectedDesign.name}
+                  ratio="aspect-[3/4]"
+                  fit="contain"
+                  priority
+                />
+              ) : isCustomCakeProduct(product.id) ? (
+                <CakeGallery
+                  images={[
+                    { src: imageSrc(product) || CUSTOM_CAKE_COVER_IMAGE, alt: product.name },
+                    ...designs.map((design) => ({ src: imageSrc(design), alt: design.name })),
+                  ]}
+                />
               ) : (
                 <SmartImage
+                  background="white"
                   src={imageSrc(product)}
                   alt={product.name}
                   ratio="aspect-square"
@@ -118,7 +152,34 @@ function ProductPage() {
             <p className="mt-6 max-w-[64ch] text-base leading-relaxed">{product.description}</p>
 
             <div className="mt-8">
-              <AddToBasket slug={product.slug} />
+              {designListing ? (
+                <div className="space-y-4 rounded-lg border border-border p-5">
+                  <p className="text-sm text-muted-foreground">
+                    This photograph is a design reference. The starting price covers the simplest
+                    qualifying custom cake; recreating this example may require paid extras. Choose
+                    your size, layers and decorations to see your total.
+                  </p>
+                  <Link
+                    to="/menu/$slug"
+                    params={{ slug: CUSTOM_CAKE_PRODUCT_SLUG }}
+                    search={{ design: product.slug }}
+                    className="inline-block rounded-sm bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
+                  >
+                    Customise this design
+                  </Link>
+                </div>
+              ) : (
+                <>
+                  {selectedDesign && (
+                    <p className="mb-4 font-semibold">Design reference: {selectedDesign.name}</p>
+                  )}
+                  <AddToBasket
+                    key={selectedDesign?.id ?? product.id}
+                    slug={product.slug}
+                    design={selectedDesign}
+                  />
+                </>
+              )}
             </div>
 
             <ul className="mt-8 space-y-2 border-t border-border pt-6 text-sm">
@@ -132,13 +193,13 @@ function ProductPage() {
 
             <div className="mt-8 flex flex-wrap gap-3">
               <a
-                href={`${BUSINESS.whatsapp}?text=${waText}`}
+                href={`${contact.whatsapp}?text=${waText}`}
                 target="_blank"
                 rel="noreferrer noopener"
                 className="inline-flex items-center gap-2 rounded-sm border border-input px-6 py-3.5 text-sm font-semibold"
               >
                 <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                Ask on WhatsApp
+                Chat with Wendy
               </a>
             </div>
 
@@ -172,8 +233,8 @@ function ProductPage() {
               <AccordionItem value="allergens">
                 <AccordionTrigger>Allergens</AccordionTrigger>
                 <AccordionContent>
-                  Baked in a single kitchen that handles wheat, dairy, egg and nuts, so
-                  cross-contact cannot be ruled out. Tell me about allergies when you order.
+                  Baked in a single bakery that handles wheat, dairy, egg and nuts, so cross-contact
+                  cannot be ruled out. Tell me about allergies when you order.
                 </AccordionContent>
               </AccordionItem>
             </Accordion>

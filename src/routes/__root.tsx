@@ -87,7 +87,7 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       {
         name: "description",
         content:
-          "Toronto celebration cakes with a Naija heart. Custom cakes, cupcakes, pastries, cake loaves and drinks made to order for pickup in Etobicoke.",
+          "Made-to-order celebration cakes in Toronto. Custom cakes and cupcakes made to order for pickup in Etobicoke.",
       },
       { name: "author", content: "Wendy's Bakehouse" },
       { property: "og:site_name", content: "Wendy's Bakehouse" },

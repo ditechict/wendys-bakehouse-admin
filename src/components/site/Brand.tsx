@@ -18,19 +18,24 @@ export function Lockup({
   tone?: "ink" | "cream";
   withDescriptor?: boolean;
 }) {
-  const nameTone = tone === "cream" ? "text-cocoa-foreground" : "text-foreground";
   const descTone = tone === "cream" ? "text-cocoa-foreground/60" : "text-muted-foreground";
   return (
-    <Link to="/" className="group flex items-center gap-3" aria-label="Wendy's Bakehouse — home">
-      <Monogram />
-      <span className="flex flex-col leading-none">
-        <span className={`font-display text-lg ${nameTone}`}>
-          Wendy&rsquo;s <span className="text-gold">·</span> Bakehouse
-        </span>
-        {withDescriptor && (
-          <span className={`eyebrow mt-1 text-[10px] ${descTone}`}>Cakes in Toronto</span>
-        )}
-      </span>
+    <Link
+      to="/"
+      className={`group inline-flex shrink-0 flex-col items-center leading-none ${tone === "cream" ? "bg-transparent" : "bg-background"}`}
+      aria-label="Wendy's Bakehouse — home"
+    >
+      <img
+        src="/brand/wendys-wb-transparent.png"
+        alt="Wendy’s Bakehouse"
+        width={1536}
+        height={1024}
+        decoding="async"
+        className={`h-20 w-[120px] object-contain sm:h-24 sm:w-36 ${tone === "cream" ? "brightness-0 invert" : ""}`}
+      />
+      {withDescriptor && (
+        <span className={`eyebrow text-[9px] ${descTone}`}>Custom cakes · Toronto</span>
+      )}
     </Link>
   );
 }

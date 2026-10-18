@@ -1,6 +1,10 @@
-export const CUSTOM_CAKE_PRODUCT_ID = "44ded383-6c8e-4cbd-a8a4-e42da64c0c8b";
+import { CAKE_DESIGNS, cakeDesignPhoto } from "./cake-designs";
+
+import { CUSTOM_CAKE_PRODUCT_ID, CUSTOM_CAKE_CATEGORY_ID } from "./cake-identity";
+export { CUSTOM_CAKE_PRODUCT_ID, CUSTOM_CAKE_CATEGORY_ID } from "./cake-identity";
+export const CUSTOM_CAKE_COVER_IMAGE = "/product-photos/ivory-and-pink-floral-cake.jpg";
 export const CUSTOM_CAKE_PRODUCT_SLUG = "tiered-celebration-cake";
-export const CUSTOM_CAKE_CATEGORY_ID = "382b2742-6d74-4a4c-9a1f-dabaf5755a2d";
+
 export const CUSTOM_CAKE_DESIGN_GROUP_ID = "aab61c6f-909a-416c-b9b3-40647ff36d5f";
 
 /**
@@ -8,18 +12,7 @@ export const CUSTOM_CAKE_DESIGN_GROUP_ID = "aab61c6f-909a-416c-b9b3-40647ff36d5f
  * Stored in the private `product-images` bucket and served through the app's
  * own image endpoint, so they never reference a host-specific CDN.
  */
-export const CUSTOM_CAKE_GALLERY = [
-  "storage:custom-cakes/cake-example-01.jpg",
-  "storage:custom-cakes/cake-example-02.jpg",
-  "storage:custom-cakes/cake-example-03.jpg",
-  "storage:custom-cakes/cake-example-04.jpg",
-  "storage:custom-cakes/cake-example-05.jpg",
-  "storage:custom-cakes/cake-example-06.jpg",
-  "storage:custom-cakes/cake-example-07.jpg",
-  "storage:custom-cakes/cake-example-08.jpg",
-  "storage:custom-cakes/cake-example-09.jpg",
-  "storage:custom-cakes/cake-example-10.jpg",
-] as const;
+export const CUSTOM_CAKE_GALLERY = CAKE_DESIGNS.map((design) => cakeDesignPhoto(design.slug));
 
 export const CUSTOM_CAKE_RULE_GROUPS = {
   sizeLayers: {

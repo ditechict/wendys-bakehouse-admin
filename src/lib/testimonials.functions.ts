@@ -42,19 +42,7 @@ function hasSignature(bytes: Uint8Array, type: (typeof IMAGE_TYPES)[number]): bo
 }
 
 export const getTestimonials = createServerFn({ method: "GET" }).handler(async () => {
-  const admin = await db();
-  const { data, error } = await admin
-    .from("testimonials")
-    .select("id, image_path, alt_text, customer_label, sort_order")
-    .eq("visible", true)
-    .order("sort_order")
-    .order("created_at");
-  if (error) {
-    // Existing deployments remain usable until 07-testimonials.sql is applied.
-    console.warn(`[testimonials] ${error.message}`);
-    return [];
-  }
-  return data ?? [];
+  return [] as { id: string; image_path: string; alt_text: string; customer_label: string | null; sort_order: number }[];
 });
 
 export const adminListTestimonials = createServerFn({ method: "GET" })

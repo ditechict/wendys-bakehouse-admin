@@ -3,6 +3,7 @@ import { Cake } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { imageSrc } from "@/lib/shop";
 import { CUSTOM_CAKE_GALLERY } from "@/lib/custom-cake-contract";
+import { CAKE_DESIGNS } from "@/lib/cake-designs";
 import { SmartImage } from "@/components/site/SmartImage";
 import {
   Carousel,
@@ -13,18 +14,7 @@ import {
 } from "@/components/ui/carousel";
 
 const GALLERY_URLS = CUSTOM_CAKE_GALLERY.map((url) => imageSrc({ image_url: url }));
-const GALLERY_ALTS = [
-  "Black Baileys-themed celebration cake",
-  "Hot Wheels-themed birthday cake",
-  "Tropical getaway-themed celebration cake",
-  "Red and white 50th birthday cake",
-  "Black and gold graduation cake",
-  "Royal blue cake with gold details and pearls",
-  "Wild One safari-themed birthday cake",
-  "Lilac butterfly celebration cake",
-  "Floral buttercream cake with peonies",
-  "Monochrome black cake with palm details",
-] as const;
+const GALLERY_ALTS = CAKE_DESIGNS.map((design) => design.name);
 
 /**
  * Branded placeholder used anywhere a single cake photo would misrepresent the
@@ -76,29 +66,38 @@ export function CustomCakeMark({ className = "" }: { className?: string }) {
 /** Three-photo montage for collection cards. */
 export function CustomCakeMontage({
   className = "",
+  priority = false,
   ratio = "aspect-[4/3]",
 }: {
   className?: string;
+  priority?: boolean;
   ratio?: string;
 }) {
   return (
-    <div className={cn("relative w-full overflow-hidden rounded-[1.15rem]", ratio, className)}>
+    <div
+      role="img"
+      aria-label="Three custom celebration cake designs"
+      className={cn("relative w-full overflow-hidden rounded-[1.15rem]", ratio, className)}
+    >
       <img
         src={GALLERY_URLS[0]}
         alt=""
-        loading="lazy"
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : undefined}
         className="absolute left-0 top-0 h-[68%] w-[58%] rounded-[0.9rem] border border-gold/30 object-cover object-top shadow-lg"
       />
       <img
         src={GALLERY_URLS[1]}
         alt=""
-        loading="lazy"
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : undefined}
         className="absolute right-0 top-[12%] h-[68%] w-[50%] rounded-[0.9rem] border border-gold/30 object-cover object-top shadow-lg"
       />
       <img
         src={GALLERY_URLS[2]}
         alt=""
-        loading="lazy"
+        loading={priority ? "eager" : "lazy"}
+        fetchPriority={priority ? "high" : undefined}
         className="absolute bottom-0 left-[16%] h-[68%] w-[50%] rounded-[0.9rem] border border-gold/30 object-cover object-top shadow-lg"
       />
     </div>
@@ -106,7 +105,20 @@ export function CustomCakeMontage({
 }
 
 /** Carousel of past celebration cakes for the custom cake product page. */
-export function CakeGallery({ className = "" }: { className?: string }) {
+export function CakeGallery({
+  className = "",
+  images,
+}: {
+  className?: string;
+  images?: { src: string; alt: string }[];
+}) {
+  const photos =
+    images === undefined
+      ? GALLERY_URLS.map((src, i) => ({ src, alt: GALLERY_ALTS[i] ?? "Custom celebration cake" }))
+      : images.filter(
+          (image, index, all) =>
+            image.src && all.findIndex((other) => other.src === image.src) === index,
+        );
   return (
     <div className={cn("relative", className)}>
       <span className="absolute left-3 top-3 z-10 rounded-sm bg-cocoa px-3 py-1.5 text-xs font-semibold text-cocoa-foreground">
@@ -114,11 +126,12 @@ export function CakeGallery({ className = "" }: { className?: string }) {
       </span>
       <Carousel className="w-full" opts={{ loop: true }}>
         <CarouselContent>
-          {GALLERY_URLS.map((url, index) => (
-            <CarouselItem key={url}>
+          {photos.map((photo, index) => (
+            <CarouselItem key={photo.src}>
               <SmartImage
-                src={url}
-                alt={GALLERY_ALTS[index] ?? `Custom celebration cake example ${index + 1}`}
+                background="white"
+                src={photo.src}
+                alt={photo.alt}
                 ratio="aspect-[586/744]"
                 rounded="rounded-[1.75rem]"
                 priority={index === 0}
