@@ -1,0 +1,17 @@
+{
+  "host": "https://wendys-private-slider-review-1016.ditech-solvia.chatgpt.site",
+  "home_cupcake_image_src": null,
+  "home_cupcake_image_present": false,
+  "menu_cards": 31,
+  "uploaded_slugs_present": true,
+  "listing_price_count": 0,
+  "cupcake_price72": true,
+  "design_price130": true,
+  "design_configurator_link": true,
+  "noncake_excluded": true,
+  "all_media_http_ok": false,
+  "admin_http_status": 405,
+  "media_passed": 11,
+  "media_checked": 31,
+  "failure_cause": "SUPABASE_SERVICE_ROLE_KEY absent from Sites runtime; confirmed by worker log request da4e2cb9b6c52cb36cb226573be39a50, HTTP500"
+}

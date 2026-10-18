@@ -4,7 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { toast } from "sonner";
 import { Plus } from "lucide-react";
 import { adminListProducts, adminSaveCategory } from "@/lib/admin.functions";
-import { imageSrc } from "@/lib/shop";
+import { categoryImage } from "@/lib/shop";
+import { SmartImage } from "@/components/site/SmartImage";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -112,14 +113,12 @@ export function AdminCategories() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {categories.map((c) => (
             <article key={c.id} className="overflow-hidden rounded-[1rem] border border-border bg-card">
-              {c.image_url && (
-                <img
-                  src={imageSrc({ image_url: c.image_url, image_key: c.image_key })}
-                  alt={c.name}
-                  loading="lazy"
-                  className="aspect-[4/3] w-full object-cover"
-                />
-              )}
+              <SmartImage
+                src={categoryImage(c, data.products.filter((p) => p.status === "available"))}
+                alt={c.name}
+                fit="contain"
+                background="white"
+              />
               <div className="space-y-2 p-4">
                 <div className="flex items-start justify-between gap-3">
                   <h2 className="font-display text-lg">{c.name}</h2>
@@ -192,6 +191,9 @@ export function AdminCategories() {
                     value={draft.image_url}
                     onChange={(e) => setDraft({ ...draft, image_url: e.target.value })}
                   />
+                  <p className="text-xs text-muted-foreground">
+                    Leave blank to use the first available product photograph in this collection.
+                  </p>
                 </div>
                 <div className="grid gap-4 sm:grid-cols-2">
                   <div className="space-y-2">

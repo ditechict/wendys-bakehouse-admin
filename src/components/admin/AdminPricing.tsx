@@ -7,6 +7,11 @@ import { formatMoney } from "@/lib/shop";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { toast } from "sonner";
+import {
+  capturePricingSnapshot,
+  pricingSnapshotChanged,
+  type PricingSnapshot,
+} from "@/lib/admin-pricing-snapshot";
 function cents(value: string) {
   if (!/^-?\d+(\.\d{1,2})?$/.test(value.trim()))
     throw new Error("Enter a valid CAD amount with at most two decimal places.");
@@ -20,14 +25,16 @@ export function AdminPricing({ productId }: { productId?: string | undefined } =
   const [rule, setRule] = useState<"full" | "deposit">("full");
   const [review, setReview] = useState(false);
   const [busy, setBusy] = useState(false);
-  const product = query.data?.products.find((p) => p.id === id);
-  const groups = query.data?.groups.filter((g) => g.product_id === id) ?? [];
-  const groupIds = new Set(groups.map((g) => g.id));
-  const choices = query.data?.choices.filter((c) => groupIds.has(c.group_id)) ?? [];
+  const [snapshot, setSnapshot] = useState<PricingSnapshot | null>(null);
+  const product = snapshot?.product;
+  const groups = snapshot?.groups ?? [];
+  const choices = snapshot?.choices ?? [];
+  const stale = !!(snapshot && query.data && pricingSnapshotChanged(snapshot, query.data));
   function choose(next: string) {
-    const p = query.data?.products.find((p) => p.id === next);
-    if (!p) return;
-    const ids = new Set(query.data!.groups.filter((g) => g.product_id === next).map((g) => g.id));
+    const captured = query.data && capturePricingSnapshot(query.data, next);
+    if (!captured) return;
+    const p = captured.product;
+    setSnapshot(captured);
     setId(next);
     setRule(p.payment_rule ?? "full");
     setReview(false);
@@ -37,9 +44,7 @@ export function AdminPricing({ productId }: { productId?: string | undefined } =
       buttercream: String((p.buttercream_minimum_cents ?? 13000) / 100),
       fondant: String((p.fondant_minimum_cents ?? 28000) / 100),
       ...Object.fromEntries(
-        query
-          .data!.choices.filter((c) => ids.has(c.group_id))
-          .map((c) => [c.id, String(c.price_delta_cents / 100)]),
+        captured.choices.map((c) => [c.id, String(c.price_delta_cents / 100)]),
       ),
     });
   }
@@ -47,7 +52,7 @@ export function AdminPricing({ productId }: { productId?: string | undefined } =
     if (productId && query.data && id !== productId) choose(productId);
   }, [productId, query.data, id]);
   async function save() {
-    if (!product) return;
+    if (!product || stale) return;
     setBusy(true);
     try {
       await saveAdminPricing({
@@ -69,6 +74,7 @@ export function AdminPricing({ productId }: { productId?: string | undefined } =
         queryClient.invalidateQueries({ queryKey: ["admin", "products"] }),
       ]);
       setId("");
+      setSnapshot(null);
       setReview(false);
       toast.success("Pricing saved. The product page and Pricing page use these same values.");
     } catch (e) {
@@ -139,6 +145,7 @@ export function AdminPricing({ productId }: { productId?: string | undefined } =
           className="space-y-5"
           onSubmit={(e) => {
             e.preventDefault();
+            if (stale) return;
             try {
               Object.entries(values).forEach(([k, v]) => (k === "deposit" ? null : cents(v)));
               setReview(true);
@@ -147,6 +154,14 @@ export function AdminPricing({ productId }: { productId?: string | undefined } =
             }
           }}
         >
+          {stale && (
+            <div role="alert" className="space-y-3 rounded border border-border p-4">
+              <p>Pricing changed since you opened this editor. Reload before reviewing or saving.</p>
+              <Button type="button" variant="outline" onClick={() => choose(id)}>
+                Reload pricing and discard these edits
+              </Button>
+            </div>
+          )}
           {review && <h3 className="font-display text-xl">Review pricing changes</h3>}
           {field("base", "Base price (CAD)", product.price_cents ?? 0)}
           <label className="block">
@@ -184,7 +199,7 @@ export function AdminPricing({ productId }: { productId?: string | undefined } =
           ))}
           {review ? (
             <div className="flex gap-3">
-              <Button type="button" disabled={busy} onClick={save}>
+              <Button type="button" disabled={busy || stale} onClick={save}>
                 {busy ? "Saving…" : "Confirm and save"}
               </Button>
               <Button
@@ -197,7 +212,7 @@ export function AdminPricing({ productId }: { productId?: string | undefined } =
               </Button>
             </div>
           ) : (
-            <Button type="submit">Review changes</Button>
+            <Button type="submit" disabled={stale}>Review changes</Button>
           )}
         </form>
       )}
