@@ -1,11 +1,19 @@
+import { CatalogRouteError } from "@/components/site/CatalogNotice";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useSuspenseQuery } from "@tanstack/react-query";
 import { CtaBand, PageHeader, Section } from "@/components/site/Bits";
-import { catalogQueryOptions, formatMoney, packLabel, type ShopProduct } from "@/lib/shop";
+import { isCakeDesignProduct } from "@/lib/cake-designs";
+import {
+  catalogQueryOptions,
+  formatMoney,
+  priceLabel,
+  packLabel,
+  type ShopProduct,
+} from "@/lib/shop";
 
 const TITLE = "Price List & Lead Times — Wendy's Bakehouse, Toronto";
 const DESC =
-  "Real CAD prices for celebration cakes, cake loaves, meat pie packs, small chops and cocktail drinks in Toronto, with lead times and pickup terms in Etobicoke.";
+  "Real CAD prices for celebration cakes and cupcakes in Toronto, with lead times and pickup terms in Etobicoke.";
 
 export const Route = createFileRoute("/pricing")({
   head: () => ({
@@ -19,13 +27,7 @@ export const Route = createFileRoute("/pricing")({
     ],
   }),
   loader: ({ context }) => context.queryClient.ensureQueryData(catalogQueryOptions),
-  errorComponent: () => (
-    <Section>
-      <p className="text-muted-foreground">
-        The price list could not be loaded just now. Please refresh the page.
-      </p>
-    </Section>
-  ),
+  errorComponent: CatalogRouteError,
   notFoundComponent: () => (
     <Section>
       <p className="text-muted-foreground">That page does not exist.</p>
@@ -36,6 +38,7 @@ export const Route = createFileRoute("/pricing")({
 
 /** Upgrades that genuinely change the price, shown so the total is never a surprise. */
 function upgrades(product: ShopProduct) {
+  if (isCakeDesignProduct(product.id, product.category_id)) return [];
   return product.options.flatMap((group) =>
     group.choices
       .filter((choice) => choice.price_delta_cents !== 0)
@@ -49,6 +52,7 @@ function upgrades(product: ShopProduct) {
 function PricingPage() {
   const { products, categories } = useSuspenseQuery(catalogQueryOptions).data;
 
+  const cake = products.find((p) => p.slug === "tiered-celebration-cake");
   const listed = products
     .filter((p) => p.available && p.price_cents != null)
     .sort((a, b) => a.sort_order - b.sort_order);
@@ -110,9 +114,7 @@ function PricingPage() {
                           )}
                         </dt>
                         <dd className="shrink-0 text-right">
-                          <span className="font-display text-lg text-gold">
-                            {formatMoney(p.price_cents)}
-                          </span>
+                          <span className="font-display text-lg text-gold">{priceLabel(p)}</span>
                           {p.lead_time && (
                             <span className="block text-xs text-muted-foreground">
                               {p.lead_time} notice
@@ -165,8 +167,7 @@ function PricingPage() {
               <h2 className="font-display text-2xl">How the money works</h2>
               <ul className="mt-5 space-y-4 text-sm text-muted-foreground">
                 <li>
-                  <strong className="text-foreground">Pay in full at checkout</strong> for loaves,
-                  pies, small chops and drinks.
+                  <strong className="text-foreground">Pay in full at checkout</strong> for cupcakes.
                 </li>
                 <li>
                   <strong className="text-foreground">Custom cakes take the deposit shown</strong>{" "}
@@ -178,9 +179,11 @@ function PricingPage() {
                   checkout before you pay.
                 </li>
                 <li>
-                  <strong className="text-foreground">Custom cake minimums are $130</strong> for
-                  buttercream and $280 for fondant. Your configured total must meet the relevant
-                  minimum.
+                  <strong className="text-foreground">
+                    Custom cake minimums are {formatMoney(cake?.buttercream_minimum_cents)}
+                  </strong>{" "}
+                  for buttercream and {formatMoney(cake?.fondant_minimum_cents)} for fondant. Your
+                  configured total must meet the relevant minimum.
                 </li>
                 <li>
                   <strong className="text-foreground">Each tier is a full three-layer cake.</strong>{" "}

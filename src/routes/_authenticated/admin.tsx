@@ -6,6 +6,7 @@ import {
   CreditCard,
   FolderTree,
   Cake,
+  DollarSign,
   MessageSquareHeart,
   Settings,
 } from "lucide-react";
@@ -27,6 +28,7 @@ const NAV = [
   { to: "/admin", label: "Dashboard", icon: BarChart3, exact: true },
   { to: "/admin/orders", label: "Orders", icon: ClipboardList },
   { to: "/admin/payments", label: "Payments", icon: CreditCard },
+  { to: "/admin/pricing", label: "Pricing", icon: DollarSign },
   { to: "/admin/products", label: "Products", icon: Cake },
   { to: "/admin/testimonials", label: "Testimonials", icon: MessageSquareHeart },
   { to: "/admin/categories", label: "Collections", icon: FolderTree },

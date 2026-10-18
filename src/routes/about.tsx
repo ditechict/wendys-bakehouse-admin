@@ -1,12 +1,12 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { ShieldCheck } from "lucide-react";
-import meatPies from "@/assets/meat-pies.jpg";
-import cakeLoaves from "@/assets/cake-loaves.jpg";
+import { CUSTOM_CAKE_GALLERY } from "@/lib/custom-cake-contract";
+import { imageSrc } from "@/lib/shop";
 import { CtaBand, Eyebrow, PageHeader, Section } from "@/components/site/Bits";
 
-const TITLE = "Our story — Naija Cakes & Pastries in Toronto";
+const TITLE = "Our story — Celebration Cakes in Toronto";
 const DESC =
-  "A one-woman Etobicoke bakehouse: Certified Food Handler, made-to-order celebration cakes, and the Nigerian meat pies and cake loaves Toronto's diaspora asks for.";
+  "A one-woman Etobicoke bakehouse: Certified Food Handler, made-to-order celebration cakes and cupcakes for pickup.";
 
 export const Route = createFileRoute("/about")({
   head: () => ({
@@ -27,7 +27,7 @@ function AboutPage() {
     <>
       <PageHeader
         eyebrow="Our story"
-        title="One baker, one kitchen, two traditions."
+        title="One baker, one bakery, made for your celebration."
         lead="Wendy's Bakehouse is a made-to-order bakery in Etobicoke. Not a chain, not a shopfront — one Certified Food Handler baking to a date you have circled on a calendar."
       />
 
@@ -36,20 +36,17 @@ function AboutPage() {
           <div className="md:col-span-7">
             <p className="text-lg leading-relaxed">
               Most orders start the same way: someone has a party in ten days and needs a cake that
-              looks like the one in their head. Some of them also want three dozen meat pies,
-              because in a Nigerian house a celebration is not only sweet.
+              looks like the one in their head. Every cake starts with the occasion, the design and
+              the flavours they want to share.
             </p>
             <p className="mt-5 leading-relaxed text-muted-foreground">
-              That is the whole reason this bakehouse exists in the shape it does. Toronto has good
-              cake decorators and it has good Naija kitchens; it has very few places where you can
-              order a fondant birthday cake and a tray of properly seasoned pies in one message and
-              collect them together. Everything is baked to order for your pickup slot — nothing is
-              made ahead and frozen.
+              This bakehouse focuses on celebration cakes and cupcakes. Everything is
+              baked to order for your pickup slot — nothing is made ahead and frozen.
             </p>
             <p className="mt-5 leading-relaxed text-muted-foreground">
               Buttercream is the house finish; fondant covering is available as a clearly priced
               extra. Sculpted fondant figures and models are not offered. Bookings run by the month
-              so that the number of cakes leaving this kitchen stays honest.
+              so that the number of cakes leaving this bakery stays honest.
             </p>
 
             <div className="mt-10 flex items-start gap-4 rounded-lg border border-border bg-secondary p-6">
@@ -64,14 +61,14 @@ function AboutPage() {
 
           <div className="grid gap-6 md:col-span-5">
             <img
-              src={meatPies}
-              alt="Golden hand-crimped Nigerian meat pies cooling on parchment"
+              src={imageSrc({ image_url: CUSTOM_CAKE_GALLERY[2]! })}
+              alt="Custom celebration cake from Wendy’s Bakehouse"
               loading="lazy"
               className="w-full rounded-[1.5rem] object-cover"
             />
             <img
-              src={cakeLoaves}
-              alt="Sliced red velvet and vanilla cake loaves"
+              src={imageSrc({ image_url: CUSTOM_CAKE_GALLERY[3]! })}
+              alt="A celebration cake decorated by Wendy’s Bakehouse"
               loading="lazy"
               className="w-full rounded-[1.5rem] object-cover"
             />
@@ -80,15 +77,14 @@ function AboutPage() {
       </Section>
 
       <Section tone="cocoa">
-        <Eyebrow>The Naija side of the menu</Eyebrow>
+        <Eyebrow>Cakes for every occasion</Eyebrow>
         <h2 className="mt-4 max-w-3xl text-3xl md:text-4xl">
-          Meat pies and cake loaves get the same care as a wedding tier.
+          Every celebration deserves a cake made with care.
         </h2>
         <p className="mt-5 max-w-[64ch] text-cocoa-foreground/75">
-          Nothing on this menu is a novelty item. The pies are hand-crimped and baked the morning
-          you collect them; the loaves come in butter, coconut, fruit and nut, and red velvet. If
-          you are ordering for a naming ceremony, an introduction or a Sunday gathering, say so —
-          the quantities and the timing are different, and I plan for it.
+          Whether you are ordering a cake for a celebration, a gathering or a gift,
+          tell us the occasion so we can plan the
+          design and timing with you.
         </p>
       </Section>
 

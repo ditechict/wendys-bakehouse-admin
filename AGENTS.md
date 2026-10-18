@@ -9,6 +9,10 @@
 > the editor, so keep the branch in a working state.
 <!-- LOVABLE:END -->
 
+## Work continuity and release order
+
+Before resuming work, proposing milestones, merging or publishing, read `deploy/WORK-CHECKLIST.md`. It records the agreed task order, approvals, evidence, unfinished work and next action. Update it before authentication/approval handoffs and after meaningful progress. Recover missing context before reconstructing a plan; never infer whole-project readiness from a narrow test. Keep product-category and browser verification scopes explicit. The agreed order is admin alignment, product images in batches, then production publication. Publication is currently on hold. These are project instructions, not a claim that ChatGPT system memory was updated.
+
 ## Stack
 
 - TanStack Start + Vite (React 19, TypeScript, Tailwind v4, shadcn/ui "new-york"). Not Next.js.

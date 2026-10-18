@@ -110,8 +110,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
   const add = useCallback((item: CartItem) => {
     setItems((current) => {
-      const key = JSON.stringify([item.slug, item.options]);
-      const idx = current.findIndex((c) => JSON.stringify([c.slug, c.options]) === key);
+      const key = JSON.stringify([item.slug, item.options, item.notes ?? ""]);
+      const idx = current.findIndex(
+        (c) => JSON.stringify([c.slug, c.options, c.notes ?? ""]) === key,
+      );
       if (idx >= 0) {
         const next = [...current];
         next[idx] = { ...next[idx]!, quantity: next[idx]!.quantity + item.quantity };

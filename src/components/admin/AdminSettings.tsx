@@ -87,6 +87,7 @@ export function AdminSettings() {
       toast.success("Settings saved.");
       void queryClient.invalidateQueries({ queryKey: ["admin", "settings"] });
       void queryClient.invalidateQueries({ queryKey: ["catalog"] });
+      void queryClient.invalidateQueries({ queryKey: ["shop-contact"] });
     },
     onError: (e: Error) => toast.error(e.message),
   });
@@ -164,9 +165,7 @@ export function AdminSettings() {
               <Label>Postal code you deliver from</Label>
               <Input
                 value={form.delivery_origin_postal_code}
-                onChange={(e) =>
-                  setForm({ ...form, delivery_origin_postal_code: e.target.value })
-                }
+                onChange={(e) => setForm({ ...form, delivery_origin_postal_code: e.target.value })}
                 placeholder="M9C"
               />
             </div>

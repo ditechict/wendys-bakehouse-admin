@@ -8,7 +8,7 @@ import { isCustomCakeCartItem } from "@/lib/custom-cake-contract";
 
 const TITLE = "Your basket — Wendy's Bakehouse, Cakes in Toronto";
 const DESC =
-  "Review your cakes, cupcakes, pastries, cake loaves and drinks before checkout. Pickup in Etobicoke, Toronto.";
+  "Review your cakes and cupcakes before checkout. Pickup in Etobicoke, Toronto.";
 
 export const Route = createFileRoute("/cart")({
   head: () => ({

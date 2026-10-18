@@ -7,6 +7,20 @@
 import { defineConfig } from "@lovable.dev/vite-tanstack-config";
 
 export default defineConfig({
+  nitro: { preset: process.env["VERCEL"] ? "vercel" : "cloudflare-module" },
+  vite: {
+    server: { allowedHosts: ["terminal.local"] },
+    // Isolate this release from previously cached missing asset responses.
+    build: { assetsDir: "assets/cake-gallery" },
+    resolve: {
+      alias: {
+        "@/integrations/supabase/client": new URL(
+          "./src/lib/sites-supabase-client.ts",
+          import.meta.url,
+        ).pathname,
+      },
+    },
+  },
   tanstackStart: {
     // Redirect TanStack Start's bundled server entry to src/server.ts (our SSR error wrapper).
     // nitro/vite builds from this

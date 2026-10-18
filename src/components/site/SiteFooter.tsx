@@ -1,3 +1,4 @@
+import { useShopContact } from "@/lib/use-shop-contact";
 import { Link } from "@tanstack/react-router";
 import { Instagram, Music2, AtSign, Facebook, Phone } from "lucide-react";
 import { Lockup } from "./Brand";
@@ -11,6 +12,7 @@ const SOCIALS = [
 ];
 
 export function SiteFooter() {
+  const contact = useShopContact();
   return (
     <footer className="mt-24 bg-cocoa text-cocoa-foreground">
       <div className="mx-auto grid max-w-[1200px] gap-10 px-5 py-14 md:grid-cols-4">
@@ -18,14 +20,14 @@ export function SiteFooter() {
           <Lockup tone="cream" />
           <p className="mt-5 max-w-sm text-sm text-cocoa-foreground/70">
             {BUSINESS.tagline} Made to order in Etobicoke by a Certified Food Handler — celebration
-            cakes, cupcakes, cake loaves and Naija pastries.
+            cakes and cupcakes.
           </p>
           <a
-            href={`tel:+${BUSINESS.phoneE164}`}
+            href={`tel:+${contact.phoneE164}`}
             className="mt-6 inline-flex items-center gap-2 text-sm font-semibold text-gold"
           >
             <Phone className="h-4 w-4" aria-hidden="true" />
-            {BUSINESS.phoneDisplay}
+            {contact.phoneDisplay}
           </a>
         </div>
 
@@ -33,15 +35,13 @@ export function SiteFooter() {
           <h2 className="eyebrow text-gold">Explore</h2>
           <ul className="mt-4 space-y-2 text-sm text-cocoa-foreground/80">
             <li>
-              <Link to="/menu">Cakes &amp; treats</Link>
+              <Link to="/">Home</Link>
             </li>
             <li>
-              <Link to="/pricing">Menu &amp; pricing</Link>
+              <Link to="/menu">Menu</Link>
             </li>
             <li>
-              <Link to="/menu" search={{ category: "pastries" }}>
-                Pastries
-              </Link>
+              <Link to="/pricing">Pricing</Link>
             </li>
             <li>
               <Link to="/menu">Start an order</Link>
@@ -82,7 +82,7 @@ export function SiteFooter() {
       <div className="border-t border-cocoa-foreground/15">
         <p className="mx-auto max-w-[1200px] px-5 py-5 text-xs text-cocoa-foreground/50">
           © {new Date().getFullYear()} Wendy&rsquo;s Bakehouse — Cakes in Toronto. Not affiliated
-          with any restaurant chain of a similar name. Baked in a kitchen that handles wheat, dairy,
+          with any restaurant chain of a similar name. Baked in a bakery that handles wheat, dairy,
           egg and nuts.
         </p>
       </div>

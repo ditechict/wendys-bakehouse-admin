@@ -7,11 +7,12 @@ import {
   ProductCardSkeleton,
   Section,
 } from "@/components/site/Bits";
+import { CatalogNotice } from "@/components/site/CatalogNotice";
 import { catalogQueryOptions } from "@/lib/shop";
 
 const TITLE = "Cakes & treats — Wendy's Bakehouse, Toronto";
 const DESC =
-  "Browse made-to-order celebration cakes, cake loaves, small chops and party drinks. Prices in CAD, pickup in Etobicoke, Toronto.";
+  "Browse made-to-order celebration cakes and cupcakes. Open a cake to view pricing and customization options. Pickup in Etobicoke, Toronto.";
 
 type Search = { category?: string };
 
@@ -20,7 +21,7 @@ export const Route = createFileRoute("/menu/")({
     const c = search["category"];
     return typeof c === "string" && c.length > 0 && c.length < 80 ? { category: c } : {};
   },
-  loader: ({ context }) => context.queryClient.ensureQueryData(catalogQueryOptions),
+  loader: ({ context }) => context.queryClient.ensureQueryData(catalogQueryOptions).catch(() => undefined),
   head: () => ({
     meta: [
       { title: TITLE },
@@ -36,7 +37,7 @@ export const Route = createFileRoute("/menu/")({
 
 function MenuPage() {
   const { category } = Route.useSearch();
-  const { data, isPending } = useQuery(catalogQueryOptions);
+  const { data, isPending, isError, isFetching, refetch } = useQuery(catalogQueryOptions);
 
   const categories = data?.categories ?? [];
   const active = categories.find((c) => c.slug === category);
@@ -46,8 +47,8 @@ function MenuPage() {
     <>
       <PageHeader
         eyebrow="Cakes & treats"
-        title="The whole menu, with the prices written down."
-        lead="Custom celebration cakes, cake loaves, small chops and party drinks. Every price is written down — choose the size and finish and your total is worked out for you."
+        title="Find the cake for your celebration."
+        lead="Browse custom celebration cakes and cupcakes. Open a cake to see its pricing, sizes and design options."
       />
 
       <Section>
@@ -80,21 +81,22 @@ function MenuPage() {
           )}
         </div>
 
+        {isError && <CatalogNotice retry={() => void refetch()} busy={isFetching} cached={!!data} />}
         <div className="mt-10 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {isPending
             ? Array.from({ length: 6 }).map((_, i) => <ProductCardSkeleton key={i} />)
             : items.map((p) => <ProductCard key={p.slug} product={p} />)}
         </div>
 
-        {!isPending && items.length === 0 && (
+        {!isPending && !isError && items.length === 0 && (
           <p className="mt-10 text-sm text-muted-foreground">
             Nothing in this collection yet — check back soon.
           </p>
         )}
 
         <p className="mt-10 max-w-[70ch] text-sm text-muted-foreground">
-          Prices shown in CAD. Custom cake sizes, tiers and design extras are priced on the product
-          page. Fondant figures and sculpted models are not offered.
+          Open a product to see prices in CAD and explore sizes, tiers and design extras.
+          Fondant figures and sculpted models are not offered.
         </p>
       </Section>
 

@@ -1,3 +1,5 @@
+import { ProductImageCrop } from "./ProductImageCrop";
+import { cropProductImage } from "@/lib/product-image-crop";
 import { useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -11,10 +13,13 @@ import {
   adminListProducts,
   adminSaveProduct,
 } from "@/lib/admin.functions";
-import { isCustomCakeProduct } from "@/lib/custom-cake-contract";
+import { CUSTOM_CAKE_PRODUCT_ID, isCustomCakeProduct } from "@/lib/custom-cake-contract";
+import { isCakeDesignProduct } from "@/lib/cake-designs";
+import { SmartImage } from "@/components/site/SmartImage";
 import { formatMoney, imageSrc } from "@/lib/shop";
 import { supabase } from "@/integrations/supabase/client";
 import { AdminProductOptions } from "@/components/admin/AdminProductOptions";
+import { AdminPricing } from "@/components/admin/AdminPricing";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -123,6 +128,9 @@ export function AdminProducts() {
   });
 
   const [draft, setDraft] = useState<Draft | null>(null);
+  const [pricingOpen, setPricingOpen] = useState(false);
+  const [cropTop, setCropTop] = useState(0);
+  const [cropBottom, setCropBottom] = useState(0);
   const [pendingImage, setPendingImage] = useState<PendingImage | null>(null);
   const [unsavedImagePath, setUnsavedImagePath] = useState<string | null>(null);
   const [search, setSearch] = useState("");
@@ -134,6 +142,8 @@ export function AdminProducts() {
   };
 
   const clearPendingImage = () => {
+    setCropTop(0);
+    setCropBottom(0);
     setPendingImage((current) => {
       if (current) URL.revokeObjectURL(current.preview_url);
       return null;
@@ -142,6 +152,7 @@ export function AdminProducts() {
   };
 
   const openEditor = (product?: ProductRow) => {
+    setPricingOpen(false);
     clearPendingImage();
     if (unsavedImagePath) {
       discardUpload(unsavedImagePath);
@@ -151,6 +162,7 @@ export function AdminProducts() {
   };
 
   const closeEditor = (shouldDiscardUpload = true) => {
+    setPricingOpen(false);
     clearPendingImage();
     if (shouldDiscardUpload && unsavedImagePath) {
       discardUpload(unsavedImagePath);
@@ -169,11 +181,13 @@ export function AdminProducts() {
       let imageUrl = d.image_url.trim() || null;
       const selectedImage = pendingImage;
       if (selectedImage) {
+        const croppedFile = await cropProductImage(selectedImage.file, cropTop, cropBottom);
+        const contentType = croppedFile.type as ProductImageType;
         const prepared = await createProductImageUpload({
           data: {
             slug: d.slug.trim(),
-            content_type: selectedImage.content_type,
-            size_bytes: selectedImage.file.size,
+            content_type: contentType,
+            size_bytes: croppedFile.size,
           },
         });
         if (unsavedImagePath && unsavedImagePath !== prepared.path) {
@@ -182,15 +196,15 @@ export function AdminProducts() {
         setUnsavedImagePath(prepared.path);
         const { error: uploadError } = await supabase.storage
           .from("product-images")
-          .uploadToSignedUrl(prepared.path, prepared.token, selectedImage.file, {
+          .uploadToSignedUrl(prepared.path, prepared.token, croppedFile, {
             cacheControl: "31536000",
-            contentType: selectedImage.content_type,
+            contentType,
             upsert: false,
           });
         if (uploadError) throw new Error("Could not upload that image. Please try again.");
 
         const uploaded = await finalizeProductImageUpload({
-          data: { path: prepared.path, content_type: selectedImage.content_type },
+          data: { path: prepared.path, content_type: contentType },
         });
         imageUrl = uploaded.image_url;
         setDraft((current) => (current ? { ...current, image_url: uploaded.image_url } : current));
@@ -317,18 +331,21 @@ export function AdminProducts() {
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {visible.map((p) => (
             <div key={p.id} className="rounded-[1rem] border border-border bg-card p-4">
-              <img
+              <SmartImage
                 src={imageSrc(p)}
-                alt=""
-                loading="lazy"
-                className="aspect-[4/3] w-full rounded-[0.75rem] object-cover"
+                alt={p.name}
+                ratio="aspect-[4/3]"
+                rounded="rounded-[0.75rem]"
+                fit="contain"
               />
               <div className="mt-3 flex items-start justify-between gap-2">
                 <h3 className="font-display text-lg leading-tight">{p.name}</h3>
                 <Badge variant={STATUS_TONE[(p.status as Status) ?? "available"]}>{p.status}</Badge>
               </div>
               <p className="mt-1 text-sm text-muted-foreground">
-                {formatMoney(p.price_cents ?? 0)}
+                {isCakeDesignProduct(p.id, p.category_id)
+                  ? "Uses Custom celebration cake pricing"
+                  : formatMoney(p.price_cents ?? 0)}
                 {p.payment_rule === "deposit"
                   ? p.deposit_percent != null
                     ? ` · ${p.deposit_percent}% deposit`
@@ -403,6 +420,7 @@ export function AdminProducts() {
                 <Field label="Slug (web address)">
                   <Input
                     value={draft.slug}
+                    readOnly={isCustomCakeProduct(draft.id ?? "")}
                     onChange={(e) => setDraft({ ...draft, slug: e.target.value })}
                     required
                   />
@@ -440,48 +458,68 @@ export function AdminProducts() {
                     onChange={(e) => setDraft({ ...draft, description: e.target.value })}
                   />
                 </Field>
-                <Field label="Payment">
-                  <Select
-                    value={draft.payment_rule}
-                    disabled={isCustomCakeProduct(draft.id ?? "")}
-                    onValueChange={(v) => setDraft({ ...draft, payment_rule: v as PaymentRule })}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="full">Pay in full at checkout</SelectItem>
-                      <SelectItem value="deposit">Deposit now, balance later</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </Field>
-                {isCustomCakeProduct(draft.id ?? "") && (
-                  <p className="text-xs leading-relaxed text-muted-foreground">
-                    This product always takes a percentage deposit. Its minimum and tier rules
-                    remain enforced when the deposit percentage changes.
+                {isCakeDesignProduct(draft.id ?? "", draft.category_id) && (
+                  <p className="text-sm">
+                    This design uses the shared Custom celebration cake configurator. Edit its name,
+                    description and photograph here. Use Edit pricing below for the shared prices,
+                    minimums, deposit and paid extras.
                   </p>
                 )}
-                <div className="grid grid-cols-2 gap-4">
-                  <Field label="Price (CAD)">
-                    <Input
-                      inputMode="decimal"
-                      required
-                      value={draft.price}
-                      onChange={(e) => setDraft({ ...draft, price: e.target.value })}
-                    />
-                  </Field>
-                  <Field label="Deposit (%)">
-                    <Input
-                      type="number"
-                      min={1}
-                      max={100}
-                      required={draft.payment_rule === "deposit"}
-                      disabled={draft.payment_rule !== "deposit"}
-                      value={draft.deposit_percent}
-                      onChange={(e) => setDraft({ ...draft, deposit_percent: e.target.value })}
-                    />
-                  </Field>
-                </div>
+                {!isCakeDesignProduct(draft.id ?? "", draft.category_id) && (
+                  <>
+                    <Field label="Payment">
+                      <Select
+                        value={draft.payment_rule}
+                        disabled={!!draft.id}
+                        onValueChange={(v) =>
+                          setDraft({ ...draft, payment_rule: v as PaymentRule })
+                        }
+                      >
+                        <SelectTrigger>
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="full">Pay in full at checkout</SelectItem>
+                          <SelectItem value="deposit">Deposit now, balance later</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </Field>
+                    {isCustomCakeProduct(draft.id ?? "") && (
+                      <p className="text-xs leading-relaxed text-muted-foreground">
+                        This product always takes a percentage deposit. Its minimum and tier rules
+                        remain enforced when the deposit percentage changes.
+                      </p>
+                    )}
+                    {draft.id && (
+                      <p className="text-sm">
+                        Edit prices, minimums and deposits in the pricing section below. Product
+                        details and pricing are saved separately.
+                      </p>
+                    )}
+                    <div className="grid grid-cols-2 gap-4">
+                      <Field label="Price (CAD)">
+                        <Input
+                          inputMode="decimal"
+                          readOnly={!!draft.id}
+                          required
+                          value={draft.price}
+                          onChange={(e) => setDraft({ ...draft, price: e.target.value })}
+                        />
+                      </Field>
+                      <Field label="Deposit (%)">
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          required={draft.payment_rule === "deposit"}
+                          disabled={!!draft.id || draft.payment_rule !== "deposit"}
+                          value={draft.deposit_percent}
+                          onChange={(e) => setDraft({ ...draft, deposit_percent: e.target.value })}
+                        />
+                      </Field>
+                    </div>
+                  </>
+                )}
                 <div className="grid grid-cols-2 gap-4">
                   <Field label="Pieces per pack (optional)">
                     <Input
@@ -491,7 +529,7 @@ export function AdminProducts() {
                       onChange={(e) => setDraft({ ...draft, pack_size: e.target.value })}
                     />
                   </Field>
-                  <Field label="Pack contains (e.g. pies)">
+                  <Field label="Pack contains (e.g. cupcakes)">
                     <Input
                       value={draft.pack_unit}
                       onChange={(e) => setDraft({ ...draft, pack_unit: e.target.value })}
@@ -529,11 +567,21 @@ export function AdminProducts() {
                 </Field>
                 <Field label="Product image">
                   <div className="space-y-3 rounded-[0.9rem] border border-border p-3">
-                    {imagePreview ? (
+                    {pendingImage ? (
+                      <ProductImageCrop
+                        file={pendingImage.file}
+                        top={cropTop}
+                        bottom={cropBottom}
+                        onChange={(top, bottom) => {
+                          setCropTop(top);
+                          setCropBottom(bottom);
+                        }}
+                      />
+                    ) : imagePreview ? (
                       <img
                         src={imagePreview}
                         alt={draft.name ? `${draft.name} preview` : "Product preview"}
-                        className="aspect-[4/3] w-full rounded-[0.7rem] bg-secondary object-contain"
+                        className="aspect-[4/3] w-full rounded-[0.7rem] bg-white object-contain"
                       />
                     ) : (
                       <div className="flex aspect-[4/3] items-center justify-center rounded-[0.7rem] bg-secondary text-sm text-muted-foreground">
@@ -561,6 +609,8 @@ export function AdminProducts() {
                           input.value = "";
                           return;
                         }
+                        setCropTop(0);
+                        setCropBottom(0);
                         const contentType: ProductImageType = file.type;
                         setPendingImage((current) => {
                           if (current) URL.revokeObjectURL(current.preview_url);
@@ -628,7 +678,11 @@ export function AdminProducts() {
                     </Select>
                   </Field>
                 </div>
-                {draft.id ? (
+                {isCakeDesignProduct(draft.id ?? "", draft.category_id) ? (
+                  <p className="text-sm text-muted-foreground">
+                    Sizes, flavours and paid extras are inherited from the main custom cake.
+                  </p>
+                ) : draft.id ? (
                   <div className="rounded-[0.75rem] border border-border bg-muted/30 p-3">
                     <h4 className="font-display text-lg">Customer choices</h4>
                     <div className="mt-2">
@@ -644,6 +698,31 @@ export function AdminProducts() {
                   {save.isPending ? "Saving…" : "Save product"}
                 </Button>
               </form>
+              {(draft.id || isCakeDesignProduct("", draft.category_id)) && (
+                <div className="space-y-4 rounded-lg border border-border bg-card p-4">
+                  <h3 className="font-display text-xl">Product pricing</h3>
+                  {isCakeDesignProduct(draft.id ?? "", draft.category_id) && (
+                    <p className="text-sm text-muted-foreground">
+                      Shared custom-cake pricing: changes here affect every design using the
+                      Custom celebration cake configurator. This does not set a separate price for
+                      this photograph. Design costs must use the supported paid extras.
+                    </p>
+                  )}
+                  <p className="text-sm text-muted-foreground">
+                    Save product details with Save product above. Review and save pricing separately
+                    below; saving one section does not save changes in the other.
+                  </p>
+                  <Button type="button" variant="outline" onClick={() => setPricingOpen(!pricingOpen)}>
+                    {pricingOpen ? "Close pricing editor" : "Edit pricing"}
+                  </Button>
+                  {pricingOpen && (
+                    <AdminPricing
+                      productId={isCakeDesignProduct(draft.id ?? "", draft.category_id)
+                        ? CUSTOM_CAKE_PRODUCT_ID : draft.id}
+                    />
+                  )}
+                </div>
+              )}
             </>
           )}
         </DialogContent>

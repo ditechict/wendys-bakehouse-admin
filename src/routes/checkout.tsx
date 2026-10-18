@@ -332,7 +332,7 @@ function CheckoutPage() {
               className="inline-flex items-center gap-2 rounded-sm bg-primary px-5 py-3 text-sm font-semibold text-primary-foreground"
             >
               <MessageCircle className="h-4 w-4" aria-hidden="true" />
-              Send receipt on WhatsApp
+              Send receipt in chat
             </a>
             <Link
               to="/menu"
@@ -530,7 +530,7 @@ function CheckoutPage() {
                   )}
                   <TabsTrigger value="whatsapp" className="gap-2">
                     <MessageCircle className="h-4 w-4" aria-hidden="true" />
-                    WhatsApp
+                    Chat
                   </TabsTrigger>
                   <TabsTrigger value="bank_transfer" className="gap-2">
                     <Landmark className="h-4 w-4" aria-hidden="true" />
@@ -747,7 +747,7 @@ function CheckoutPage() {
                   : method === "card"
                     ? `Pay ${totals ? formatMoney(totals.due_now_cents) : "by card"} securely`
                     : method === "whatsapp"
-                      ? "Place order & open WhatsApp"
+                      ? "Place order & chat"
                       : "Place order & submit slip"}
               </button>
               <p className="mt-3 text-xs text-muted-foreground">

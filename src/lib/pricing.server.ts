@@ -1,3 +1,5 @@
+import { CAKE_COLLECTION_SLUGS } from "./cake-only-catalog";
+import { isCakeDesignProduct } from "./cake-designs";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import {
   CUSTOM_CAKE_CATEGORY_ID,
@@ -104,16 +106,33 @@ export async function priceLines(requests: LineRequest[]): Promise<PricedLine[]>
   const { data: products, error } = await supabase
     .from("products")
     .select(
-      "id, slug, name, status, lead_time, price_cents, deposit_cents, deposit_percent, payment_rule, pack_size, pack_unit, category_id",
+      "id, slug, name, status, available, updated_at, buttercream_minimum_cents, fondant_minimum_cents, lead_time, price_cents, deposit_cents, deposit_percent, payment_rule, pack_size, pack_unit, category_id",
     )
     .in("slug", slugs);
   if (error) throw new PricingError("We could not load the menu. Please try again.");
 
+  const { data: categories, error: categoryError } = await supabase
+    .from("categories")
+    .select("id")
+    .in("slug", CAKE_COLLECTION_SLUGS)
+    .eq("visible", true);
+  if (categoryError) throw new PricingError("We could not load the menu. Please try again.");
+  const categoryIds = new Set((categories ?? []).map((c) => c.id));
   const bySlug = new Map((products ?? []).map((p) => [p.slug, p]));
   for (const slug of slugs) {
     const product = bySlug.get(slug);
     if (!product) throw new PricingError(`"${slug}" is no longer on the menu.`);
-    if (product.status !== "available") {
+    if (isCakeDesignProduct(product.id, product.category_id)) {
+      throw new PricingError(
+        "Choose this design through the custom-cake configurator before ordering.",
+      );
+    }
+    if (
+      !product.category_id ||
+      !categoryIds.has(product.category_id) ||
+      !product.available ||
+      product.status !== "available"
+    ) {
       throw new PricingError(`${product.name} is not available to order right now.`);
     }
     if (product.price_cents == null) {
@@ -171,7 +190,7 @@ export async function priceLines(requests: LineRequest[]): Promise<PricedLine[]>
     choicesByGroup.set(c.group_id, list);
   }
 
-  return requests.map((request) => {
+  const priced = requests.map((request) => {
     const product = bySlug.get(request.slug)!;
     const allProductGroups = groupsByProduct.get(product.id) ?? [];
     const requireCakeGroup = (
@@ -316,10 +335,12 @@ export async function priceLines(requests: LineRequest[]): Promise<PricedLine[]>
       }
 
       const fondant = fondantCovering != null;
-      const minimum = fondant ? 28_000 : 13_000;
+      const minimum = fondant ? product.fondant_minimum_cents : product.buttercream_minimum_cents;
+      if (minimum == null || minimum < 1)
+        throw new PricingError("Cake minimums are not configured.");
       if (unitTotal < minimum) {
         throw new PricingError(
-          `${product.name} has a ${fondant ? "$280 fondant" : "$130 buttercream"} minimum. Add a larger size or more design details.`,
+          `${product.name} has a ${fondant ? "fondant" : "buttercream"} minimum of $${(minimum / 100).toFixed(2)}. Add a larger size or more design details.`,
         );
       }
     }
@@ -364,6 +385,20 @@ export async function priceLines(requests: LineRequest[]): Promise<PricedLine[]>
       lead_time: product.lead_time,
     };
   });
+  const { data: revisions, error: revisionError } = await supabase
+    .from("products")
+    .select("id,updated_at")
+    .in("id", productIds);
+  if (
+    revisionError ||
+    revisions?.length !== products?.length ||
+    revisions?.some(
+      (p) => products?.find((before) => before.id === p.id)?.updated_at !== p.updated_at,
+    )
+  ) {
+    throw new PricingError("Prices changed while calculating your basket. Please try again.");
+  }
+  return priced;
 }
 
 /**

@@ -27,7 +27,7 @@ export function bookingMonth(date = new Date()): string {
 export const BUSINESS = {
   name: "Wendy's Bakehouse",
   descriptor: "Custom Cakes in Toronto & Etobicoke",
-  tagline: "Toronto celebration cakes with a Naija heart.",
+  tagline: "Made-to-order celebration cakes in Toronto.",
   phoneDisplay: "647-620-2518",
   phoneE164: "16476202518",
   whatsapp: "https://wa.me/16476202518",
@@ -44,7 +44,7 @@ export const BUSINESS = {
 export const FAQS = [
   {
     q: "How much notice do you need?",
-    a: "Please allow two weeks for a custom cake and at least three days for cupcakes, loaves, pastries and drinks. A rush custom cake under 48 hours may be available when the rush add-on is selected; the date is not held until Wendy confirms it.",
+    a: "Please allow two weeks for a custom cake and at least three days for cupcakes. A rush custom cake under 48 hours may be available when the rush add-on is selected; the date is not held until Wendy confirms it.",
   },
   {
     q: "Where do I collect my order?",
@@ -60,7 +60,7 @@ export const FAQS = [
   },
   {
     q: "How are custom cake prices worked out?",
-    a: "Choose the cake size and layer count, then add each design detail you want. Buttercream custom cakes have a $130 minimum and fondant cakes have a $280 minimum. Every tier is a separate full three-layer cake, and the complete total is shown before checkout.",
+    a: "Choose the cake size and layer count, then add each design detail you want. Buttercream and fondant minimums are shown on the Pricing page and alongside your cake configuration. Every tier is a separate full three-layer cake, and the complete total is shown before checkout.",
   },
   {
     q: "Do you make fondant figures or sculpted models?",
@@ -68,6 +68,6 @@ export const FAQS = [
   },
   {
     q: "What should I know about allergies?",
-    a: "Everything is baked in one kitchen that handles wheat, dairy, egg and nuts, so cross-contact cannot be ruled out. Add allergy details at checkout and Wendy will confirm whether the order can be made safely.",
+    a: "Everything is baked in one bakery that handles wheat, dairy, egg and nuts, so cross-contact cannot be ruled out. Add allergy details at checkout and Wendy will confirm whether the order can be made safely.",
   },
 ] as const;

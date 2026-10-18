@@ -14,6 +14,10 @@ type AddFields<
 
 type DepositPercentRow = { deposit_percent: number | null };
 type DepositPercentWrite = { deposit_percent?: number | null };
+type CakeMinimums = {
+  buttercream_minimum_cents: number | null;
+  fondant_minimum_cents: number | null;
+};
 type MultipleRow = { allow_multiple: boolean };
 type MultipleWrite = { allow_multiple?: boolean };
 
@@ -48,7 +52,11 @@ export type AppDatabase = Omit<Database, "public"> & {
       GeneratedTables,
       "products" | "product_option_groups" | "orders" | "order_items" | "testimonials"
     > & {
-      products: AddFields<GeneratedTables["products"], DepositPercentRow, DepositPercentWrite>;
+      products: AddFields<
+        GeneratedTables["products"],
+        DepositPercentRow & CakeMinimums,
+        DepositPercentWrite & Partial<CakeMinimums>
+      >;
       product_option_groups: AddFields<
         GeneratedTables["product_option_groups"],
         MultipleRow,

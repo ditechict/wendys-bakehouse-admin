@@ -1,10 +1,8 @@
+import { CUSTOM_CAKE_PRODUCT_ID, isCustomCakeProduct } from "./custom-cake-contract";
+import { isCakeDesignProduct } from "./cake-designs";
 import { queryOptions } from "@tanstack/react-query";
 import { getCatalog, getBankDetails } from "@/lib/catalog.functions";
-
-import heroCake from "@/assets/hero-cake.jpg";
-import meatPies from "@/assets/meat-pies.jpg";
-import cakeLoaves from "@/assets/cake-loaves.jpg";
-import cupcakes from "@/assets/cupcakes.jpg";
+import { realPhotoSrc } from "./product-photo";
 
 export type PricingMode = "fixed" | "deposit" | "quote";
 
@@ -41,6 +39,9 @@ export type ShopProduct = {
   description: string;
   pricing_mode: PricingMode;
   price_cents: number | null;
+  starting_price_cents: number | null;
+  buttercream_minimum_cents: number | null;
+  fondant_minimum_cents: number | null;
   deposit_cents: number | null;
   deposit_percent: number | null;
   price_note: string | null;
@@ -80,25 +81,12 @@ export const FALLBACK_BANK_DETAILS: BankDetails = {
   bank_note: "Use your order reference as the transfer description.",
 };
 
-const BUNDLED: Record<string, string> = {
-  "hero-cake": heroCake,
-  "meat-pies": meatPies,
-  "cake-loaves": cakeLoaves,
-  cupcakes: cupcakes,
-};
-
 /** Resolves an image reference to a URL the browser can load. */
 export function imageSrc(
   ref: { image_url?: string | null; image_key?: string | null } | null | undefined,
 ): string {
-  const url = ref?.image_url;
-  if (url) {
-    if (url.startsWith("storage:")) {
-      return `/api/public/product-image/${url.slice("storage:".length)}`;
-    }
-    return url;
-  }
-  return BUNDLED[ref?.image_key ?? "hero-cake"] ?? heroCake;
+  // Legacy image_key entries point to generated photos. Use only uploaded photos.
+  return realPhotoSrc(ref?.image_url);
 }
 
 export function formatMoney(cents: number | null | undefined): string {
@@ -112,15 +100,17 @@ export function formatMoney(cents: number | null | undefined): string {
 
 /** Short label used on cards and listings. */
 export function priceLabel(p: {
+  starting_price_cents?: number | null;
   price_cents: number | null;
   options?: ProductOptionGroup[];
 }): string {
+  if (p.starting_price_cents === null) return "Currently unavailable";
   if (p.price_cents == null) return "Ask for a price";
   const hasUpgrades = (p.options ?? []).some((g) => g.choices.some((c) => c.price_delta_cents > 0));
-  return `${hasUpgrades ? "From " : ""}${formatMoney(p.price_cents)}`;
+  return `${hasUpgrades ? "From " : ""}${formatMoney(p.starting_price_cents ?? p.price_cents)}`;
 }
 
-/** "12 pies per pack" style label, when the product is sold by the pack. */
+/** "12 cupcakes per box" style label, when the product is sold by the pack. */
 export function packLabel(p: {
   pack_size: number | null;
   pack_unit: string | null;
@@ -176,19 +166,29 @@ export async function fetchCatalog(): Promise<{
       slug: p.slug,
       name: p.name,
       category_id: p.category_id,
-      short: p.short,
+      short: isCustomCakeProduct(p.id)
+        ? "Custom celebration cakes, with every size and design detail priced upfront."
+        : p.short,
       description: p.description,
       pricing_mode: p.pricing_mode as PricingMode,
       price_cents: p.price_cents,
+      starting_price_cents: p.starting_price_cents,
+      buttercream_minimum_cents: p.buttercream_minimum_cents,
+      fondant_minimum_cents: p.fondant_minimum_cents,
       deposit_cents: p.deposit_cents,
       deposit_percent: p.deposit_percent,
-      price_note: p.price_note,
+      price_note: isCustomCakeProduct(p.id)
+        ? `Buttercream minimum ${formatMoney(p.buttercream_minimum_cents)}; fondant minimum ${formatMoney(p.fondant_minimum_cents)}.`
+        : p.price_note,
       price_band: p.price_band,
       lead_time: p.lead_time,
       serves: p.serves,
       image_key: p.image_key,
       image_url: p.image_url,
-      options: groupsByProduct.get(p.id) ?? [],
+      options:
+        groupsByProduct.get(
+          isCakeDesignProduct(p.id, p.category_id) ? CUSTOM_CAKE_PRODUCT_ID : p.id,
+        ) ?? [],
       includes: parseStrings(p.includes),
       available: p.available,
       sort_order: p.sort_order,
@@ -213,6 +213,8 @@ export function bankDetailsQueryOptions(slugs: string[]) {
 
 export const catalogQueryOptions = queryOptions({
   queryKey: ["catalog"],
+  retry: 1,
+  retryDelay: 1000,
   queryFn: fetchCatalog,
   staleTime: 30_000,
 });

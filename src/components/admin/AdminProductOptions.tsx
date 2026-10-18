@@ -231,17 +231,8 @@ export function AdminProductOptions({ productId }: { productId: string }) {
                       inputMode="decimal"
                       aria-label={`Extra cost for ${c.label}`}
                       defaultValue={(c.price_delta_cents / 100).toString()}
-                      onBlur={(e) =>
-                        choiceMutation.mutate({
-                          id: c.id,
-                          group_id: g.id,
-                          key: c.key,
-                          label: c.label,
-                          price_delta_cents: toCents(e.target.value),
-                          available: c.available,
-                          sort_order: c.sort_order,
-                        })
-                      }
+                      readOnly
+                      title="Edit adjustments in Admin → Pricing"
                     />
                   </div>
                   <label className="flex items-center gap-2 text-sm">
