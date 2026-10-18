@@ -3,6 +3,7 @@ import { isCakeDesignProduct } from "./cake-designs";
 import { queryOptions } from "@tanstack/react-query";
 import { getCatalog, getBankDetails } from "@/lib/catalog.functions";
 import { realPhotoSrc } from "./product-photo";
+import { collectionPhoto } from "./collection-photo";
 
 export type PricingMode = "fixed" | "deposit" | "quote";
 
@@ -219,8 +220,9 @@ export const catalogQueryOptions = queryOptions({
   staleTime: 30_000,
 });
 
-export function categoryImage(category: ShopCategory, products: ShopProduct[]): string {
-  if (category.image_url || category.image_key) return imageSrc(category);
-  const first = products.find((p) => p.category_id === category.id);
-  return imageSrc(first ?? null);
+export function categoryImage(
+  category: ShopCategory,
+  products: readonly Pick<ShopProduct, "category_id" | "image_url" | "available">[],
+): string {
+  return collectionPhoto(category, products);
 }
