@@ -17,7 +17,6 @@ import {
 } from "@/lib/shop";
 import { placeOrder, previewCart, submitTransferProof, type PlaceOrderInput } from "@/lib/orders.functions";
 import { getBankDetails } from "@/lib/catalog.functions";
-import type { BankDetails } from "@/lib/shop";
 import { cardPaymentsEnabled, startCardPayment } from "@/lib/payments.functions";
 
 type PayMethod = "whatsapp" | "bank_transfer" | "card";
@@ -101,7 +100,7 @@ function CheckoutPage() {
   const { data: catalog } = useQuery(catalogQueryOptions);
   const settings = catalog?.settings ?? FALLBACK_SETTINGS;
   const fetchBank = useServerFn(getBankDetails);
-  const [bank, setBank] = useState<BankDetails | null>(null);
+  const [bank, setBank] = useState<Awaited<ReturnType<typeof fetchBank>> | null>(null);
   const { data: cardState } = useQuery({
     queryKey: ["card-payments-enabled"],
     queryFn: () => checkCard({}),
