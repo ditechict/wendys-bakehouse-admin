@@ -105,29 +105,24 @@ export const getCatalog = createServerFn({ method: "GET" }).handler(async () => 
   };
 });
 
-/**
- * Bank transfer details. Kept out of the public Data API and returned only for
- * a real checkout context — the caller must name at least one orderable item.
- */
+/** Only a persisted bank-transfer order holder may access payment instructions. */
 export const getBankDetails = createServerFn({ method: "POST" })
-  .inputValidator((data: unknown) =>
-    z.object({ slugs: z.array(z.string().min(1).max(120)).min(1).max(30) }).parse(data),
-  )
+  .inputValidator((data: unknown) => z.object({ token: z.string().min(20).max(1024) }).parse(data))
   .handler(async ({ data }) => {
+    const { verifyOrderAccess } = await import("@/lib/order-access.server");
+    const id = verifyOrderAccess(data.token);
+    if (!id) throw new Error("This payment link is invalid or expired.");
     const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-    const { count } = await supabaseAdmin
-      .from("products")
-      .select("id", { count: "exact", head: true })
-      .in("slug", data.slugs)
-      .eq("available", true);
-
-    if (!count) return null;
-
-    const { data: settings } = await supabaseAdmin
-      .from("settings")
-      .select("bank_account_name, bank_account_number, bank_name, bank_note")
-      .limit(1)
-      .maybeSingle();
-    return settings ?? null;
+    const { data: order, error } = await supabaseAdmin.from("orders")
+      .select("id, checkout_method, payment_status").eq("id", id).maybeSingle();
+    if (error || !order || order.checkout_method !== "bank_transfer" ||
+        !["not_paid", "pending_verification"].includes(order.payment_status)) {
+      throw new Error("Bank transfer details are unavailable for this order.");
+    }
+    const { data: settings, error: settingsError } = await supabaseAdmin.from("settings")
+      .select("bank_account_name, bank_account_number, bank_name, bank_note").limit(1).maybeSingle();
+    if (settingsError || !settings?.bank_account_number || !settings.bank_name) {
+      throw new Error("Bank details are not configured. Contact the bakery.");
+    }
+    return settings;
   });
