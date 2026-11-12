@@ -16,6 +16,7 @@ import {
   FALLBACK_SETTINGS,
 } from "@/lib/shop";
 import { placeOrder, previewCart, submitTransferProof, type PlaceOrderInput } from "@/lib/orders.functions";
+import type { SLIP_CONTENT_TYPES } from "@/lib/order-schemas";
 import { getBankDetails } from "@/lib/catalog.functions";
 import { cardPaymentsEnabled, startCardPayment } from "@/lib/payments.functions";
 
@@ -305,7 +306,7 @@ function CheckoutPage() {
                       transfer_date: form.transfer_date || undefined,
                       slip: {
                         filename: slip.name,
-                        content_type: slip.type as NonNullable<PlaceOrderInput["slip"]>["content_type"],
+                        content_type: slip.type as (typeof SLIP_CONTENT_TYPES)[number],
                         data_base64: await readFileAsBase64(slip),
                       },
                     } });
