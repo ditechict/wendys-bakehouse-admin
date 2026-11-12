@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
 import {
   itemSchema,
   orderSchema,
@@ -22,7 +23,10 @@ function decodeBase64(data: string): Uint8Array {
 export const placeOrder = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => orderSchema.parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (data.checkout_method === "bank_transfer") {
+      const { assertOrderAccessConfigured } = await import("@/lib/order-access.server");
+      assertOrderAccessConfigured();
+    }
     const { createPricedOrder } = await import("@/lib/order-create.server");
 
     const isTransfer = data.checkout_method === "bank_transfer";
@@ -133,7 +137,7 @@ export const submitTransferProof = createServerFn({ method: "POST" })
     token: z.string().min(20).max(1024),
     payer_name: z.string().trim().min(1).max(100),
     transfer_reference: z.string().trim().max(80).optional(),
-    transfer_date: z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/).optional(),
+    transfer_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     slip: slipSchema,
   }).parse(value))
   .handler(async ({ data }) => {
@@ -147,7 +151,7 @@ export const submitTransferProof = createServerFn({ method: "POST" })
         order.payment_status !== "not_paid") throw new Error("Payment evidence cannot be submitted for this order.");
     const bytes = decodeBase64(data.slip.data_base64);
     if (bytes.byteLength > MAX_SLIP_BYTES) throw new Error("Payment slip is too large.");
-    const path = id + "/slip-" + crypto.randomUUID() + "." + SLIP_EXTENSIONS[data.slip.content_type];
+    const path = id + "/slip-" + randomUUID() + "." + SLIP_EXTENSIONS[data.slip.content_type];
     const { error: uploadError } = await supabaseAdmin.storage.from("payment-slips")
       .upload(path, bytes, { contentType: data.slip.content_type, upsert: false });
     if (uploadError) throw new Error("Payment evidence could not be uploaded.");
