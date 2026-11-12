@@ -9,6 +9,10 @@ function signingKey(): string {
   return secret;
 }
 
+export function assertOrderAccessConfigured(): void {
+  signingKey();
+}
+
 export function issueOrderAccess(orderId: string): string {
   const payload = Buffer.from(JSON.stringify({
     id: orderId, exp: Date.now() + TTL_MS, nonce: randomBytes(16).toString("hex"),
