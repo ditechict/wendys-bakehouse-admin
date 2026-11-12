@@ -150,6 +150,18 @@ export const submitTransferProof = createServerFn({ method: "POST" })
         order.payment_status !== "not_paid") throw new Error("Payment evidence cannot be submitted for this order.");
     const bytes = decodeBase64(data.slip.data_base64);
     if (bytes.byteLength > MAX_SLIP_BYTES) throw new Error("Payment slip is too large.");
+    // Do not trust the client-provided MIME type alone.
+    const starts = (...signature: number[]) => signature.every((byte, i) => bytes[i] === byte);
+    const asciiAt = (offset: number, value: string) =>
+      [...value].every((character, i) => bytes[offset + i] === character.charCodeAt(0));
+    const type = data.slip.content_type;
+    const valid =
+      (type === "image/jpeg" && starts(0xff, 0xd8, 0xff)) ||
+      (type === "image/png" && starts(0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a)) ||
+      (type === "image/webp" && asciiAt(0, "RIFF") && asciiAt(8, "WEBP")) ||
+      (type === "image/heic" && asciiAt(4, "ftyp") &&
+        ["heic", "heix", "hevc", "hevx", "mif1"].some((brand) => asciiAt(8, brand)));
+    if (!valid) throw new Error("The uploaded file does not match its image format.");
     const path = id + "/slip-" + crypto.randomUUID() + "." + SLIP_EXTENSIONS[data.slip.content_type];
     const { error: uploadError } = await supabaseAdmin.storage.from("payment-slips")
       .upload(path, bytes, { contentType: data.slip.content_type, upsert: false });
