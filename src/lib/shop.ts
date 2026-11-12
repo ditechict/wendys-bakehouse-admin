@@ -1,7 +1,7 @@
 import { CUSTOM_CAKE_PRODUCT_ID, isCustomCakeProduct } from "./custom-cake-contract";
 import { isCakeDesignProduct } from "./cake-designs";
 import { queryOptions } from "@tanstack/react-query";
-import { getCatalog, getBankDetails } from "@/lib/catalog.functions";
+import { getCatalog } from "@/lib/catalog.functions";
 import { realPhotoSrc } from "./product-photo";
 import { collectionPhoto } from "./collection-photo";
 
@@ -73,13 +73,6 @@ export type BankDetails = {
   bank_account_number: string;
   bank_name: string;
   bank_note: string;
-};
-
-export const FALLBACK_BANK_DETAILS: BankDetails = {
-  bank_account_name: "Wendy's Bakehouse",
-  bank_account_number: "0011223344",
-  bank_name: "Wends bakery",
-  bank_note: "Use your order reference as the transfer description.",
 };
 
 /** Resolves an image reference to a URL the browser can load. */
@@ -199,17 +192,6 @@ export async function fetchCatalog(): Promise<{
     })),
     settings: data.settings ?? FALLBACK_SETTINGS,
   };
-}
-
-/** Bank details are only served for a real basket, so the slugs are required. */
-export function bankDetailsQueryOptions(slugs: string[]) {
-  return queryOptions({
-    queryKey: ["bank-details", [...slugs].sort()],
-    enabled: slugs.length > 0,
-    queryFn: async (): Promise<BankDetails> =>
-      (await getBankDetails({ data: { slugs } })) ?? FALLBACK_BANK_DETAILS,
-    staleTime: 60_000,
-  });
 }
 
 export const catalogQueryOptions = queryOptions({
