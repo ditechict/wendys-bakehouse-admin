@@ -41,7 +41,7 @@ export const placeOrder = createServerFn({ method: "POST" })
     const { id, reference, cart, lines } = await createPricedOrder(data, {
       checkout_method: data.checkout_method,
       payment_provider: isTransfer ? "bank_transfer" : "whatsapp",
-      payment_status: isTransfer ? "pending_verification" : "not_paid",
+      payment_status: "not_paid",
       payer_name: data.payer_name ?? null,
       transfer_reference: data.transfer_reference ?? null,
       transfer_date: data.transfer_date || null,
@@ -71,7 +71,10 @@ export const placeOrder = createServerFn({ method: "POST" })
       }
     }
 
+    const { issueOrderAccess } = await import("@/lib/order-access.server");
+    const orderAccessToken = isTransfer ? issueOrderAccess(id) : null;
     return {
+      orderAccessToken,
       reference,
       dueNowCents: cart.due_now_cents,
       subtotalCents: cart.subtotal_cents,
