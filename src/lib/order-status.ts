@@ -38,11 +38,11 @@ const NEXT_STATUS: Record<OrderStatus, OrderStatus[]> = {
 };
 
 const NEXT_PAYMENT: Record<PaymentStatus, PaymentStatus[]> = {
-  not_paid: ["pending_verification", "paid"],
+  not_paid: ["pending_verification"],
   pending_verification: ["paid", "not_paid"],
   pending: ["paid", "expired", "failed", "not_paid"],
-  expired: ["not_paid", "paid"],
-  failed: ["not_paid", "paid"],
+  expired: ["not_paid"],
+  failed: ["not_paid"],
   paid: ["refunded"],
   refunded: [],
 };

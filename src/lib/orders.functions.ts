@@ -1,8 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { randomUUID } from "node:crypto";
 import {
   itemSchema,
   orderSchema,
+  slipSchema,
   MAX_SLIP_BYTES,
   SLIP_EXTENSIONS,
   type PlaceOrderInput,
@@ -21,57 +23,29 @@ function decodeBase64(data: string): Uint8Array {
 export const placeOrder = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => orderSchema.parse(data))
   .handler(async ({ data }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    if (data.checkout_method === "bank_transfer") {
+      const { assertOrderAccessConfigured } = await import("@/lib/order-access.server");
+      assertOrderAccessConfigured();
+    }
     const { createPricedOrder } = await import("@/lib/order-create.server");
 
     const isTransfer = data.checkout_method === "bank_transfer";
-
-    // The slip is decoded and size-checked before anything is written, so a
-    // rejected file never leaves a half-finished order behind.
-    let slipBytes: Uint8Array | null = null;
-    if (data.slip) {
-      slipBytes = decodeBase64(data.slip.data_base64);
-      if (slipBytes.byteLength > MAX_SLIP_BYTES) {
-        throw new Error("That payment slip is larger than 5MB. Please upload a smaller file.");
-      }
-    }
 
     // Every price, and the delivery fee, is recalculated server-side from
     // current rows; order + items are written in one database transaction.
     const { id, reference, cart, lines } = await createPricedOrder(data, {
       checkout_method: data.checkout_method,
       payment_provider: isTransfer ? "bank_transfer" : "whatsapp",
-      payment_status: isTransfer ? "pending_verification" : "not_paid",
+      payment_status: "not_paid",
       payer_name: data.payer_name ?? null,
       transfer_reference: data.transfer_reference ?? null,
       transfer_date: data.transfer_date || null,
     });
 
-    let slipUploaded = false;
-    if (data.slip && slipBytes) {
-      // The file name is never used to build the storage path: the extension is
-      // derived from the validated content type, so nothing can escape the
-      // order's own folder.
-      const ext = SLIP_EXTENSIONS[data.slip.content_type];
-      const path = `${id}/slip.${ext}`;
-      const { error: uploadError } = await supabaseAdmin.storage
-        .from("payment-slips")
-        .upload(path, slipBytes, { contentType: data.slip.content_type, upsert: true });
-      if (uploadError) {
-        // The order stands; it is simply flagged as missing evidence.
-        await supabaseAdmin
-          .from("orders")
-          .update({
-            notes: [data.notes, "[Payment slip upload failed]"].filter(Boolean).join("\n"),
-          })
-          .eq("id", id);
-      } else {
-        slipUploaded = true;
-        await supabaseAdmin.from("orders").update({ slip_path: path }).eq("id", id);
-      }
-    }
-
+    const { issueOrderAccess } = await import("@/lib/order-access.server");
+    const orderAccessToken = isTransfer ? issueOrderAccess(id) : null;
     return {
+      orderAccessToken,
       reference,
       dueNowCents: cart.due_now_cents,
       subtotalCents: cart.subtotal_cents,
@@ -79,7 +53,7 @@ export const placeOrder = createServerFn({ method: "POST" })
       totalCents: cart.total_cents,
       balanceCents: cart.balance_cents,
       hasQuoteItems: false,
-      slipUploaded,
+      slipUploaded: false,
       lines: lines.map((l) => ({
         name: l.name,
         quantity: l.quantity,
@@ -155,4 +129,44 @@ export const getOrderPaymentState = createServerFn({ method: "POST" })
       balance_cents: order.balance_cents,
       total_cents: order.total_cents,
     };
+  });
+
+/** Separate proof submission: never marks an order paid; staff must verify it. */
+export const submitTransferProof = createServerFn({ method: "POST" })
+  .inputValidator((value: unknown) => z.object({
+    token: z.string().min(20).max(1024),
+    payer_name: z.string().trim().min(1).max(100),
+    transfer_reference: z.string().trim().max(80).optional(),
+    transfer_date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
+    slip: slipSchema,
+  }).parse(value))
+  .handler(async ({ data }) => {
+    const { verifyOrderAccess } = await import("@/lib/order-access.server");
+    const id = verifyOrderAccess(data.token);
+    if (!id) throw new Error("This payment link is invalid or expired.");
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    const { data: order, error: lookupError } = await supabaseAdmin.from("orders")
+      .select("id, checkout_method, payment_status").eq("id", id).maybeSingle();
+    if (lookupError || !order || order.checkout_method !== "bank_transfer" ||
+        order.payment_status !== "not_paid") throw new Error("Payment evidence cannot be submitted for this order.");
+    const bytes = decodeBase64(data.slip.data_base64);
+    if (bytes.byteLength > MAX_SLIP_BYTES) throw new Error("Payment slip is too large.");
+    const path = id + "/slip-" + randomUUID() + "." + SLIP_EXTENSIONS[data.slip.content_type];
+    const { error: uploadError } = await supabaseAdmin.storage.from("payment-slips")
+      .upload(path, bytes, { contentType: data.slip.content_type, upsert: false });
+    if (uploadError) throw new Error("Payment evidence could not be uploaded.");
+    const { data: updated, error: updateError } = await supabaseAdmin.from("orders")
+      .update({
+        slip_path: path, payer_name: data.payer_name,
+        transfer_reference: data.transfer_reference || null,
+        transfer_date: data.transfer_date || null,
+        payment_status: "pending_verification",
+      })
+      .eq("id", id).eq("payment_status", "not_paid")
+      .select("id").maybeSingle();
+    if (updateError || !updated) {
+      await supabaseAdmin.storage.from("payment-slips").remove([path]);
+      throw new Error("Order changed while submitting evidence.");
+    }
+    return { ok: true };
   });

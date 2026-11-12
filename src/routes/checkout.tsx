@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { MessageCircle, Landmark, Upload, CreditCard } from "lucide-react";
+import { MessageCircle, Landmark, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Section } from "@/components/site/Bits";
 import { Input } from "@/components/ui/input";
@@ -12,12 +12,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useCart } from "@/lib/cart";
 import {
   catalogQueryOptions,
-  bankDetailsQueryOptions,
   formatMoney,
   FALLBACK_SETTINGS,
-  FALLBACK_BANK_DETAILS,
 } from "@/lib/shop";
-import { placeOrder, previewCart, type PlaceOrderInput } from "@/lib/orders.functions";
+import { placeOrder, previewCart, submitTransferProof, type PlaceOrderInput } from "@/lib/orders.functions";
+import { getBankDetails } from "@/lib/catalog.functions";
+import type { BankDetails } from "@/lib/shop";
 import { cardPaymentsEnabled, startCardPayment } from "@/lib/payments.functions";
 
 type PayMethod = "whatsapp" | "bank_transfer" | "card";
@@ -73,6 +73,7 @@ type Receipt = {
   method: PayMethod;
   waLink: string;
   slipUploaded: boolean;
+  orderAccessToken: string | null;
 };
 
 type SubmittedOrder = {
@@ -95,12 +96,13 @@ type SubmittedOrder = {
 function CheckoutPage() {
   const { items, clear } = useCart();
   const submitOrder = useServerFn(placeOrder);
+  const submitProof = useServerFn(submitTransferProof);
   const payByCard = useServerFn(startCardPayment);
   const checkCard = useServerFn(cardPaymentsEnabled);
   const { data: catalog } = useQuery(catalogQueryOptions);
   const settings = catalog?.settings ?? FALLBACK_SETTINGS;
-  const { data: bankData } = useQuery(bankDetailsQueryOptions(items.map((i) => i.slug)));
-  const bank = bankData ?? FALLBACK_BANK_DETAILS;
+  const fetchBank = useServerFn(getBankDetails);
+  const [bank, setBank] = useState<BankDetails | null>(null);
   const { data: cardState } = useQuery({
     queryKey: ["card-payments-enabled"],
     queryFn: () => checkCard({}),
@@ -203,10 +205,6 @@ function CheckoutPage() {
     }
 
     if (method === "bank_transfer") {
-      if (!form.payer_name.trim()) {
-        toast.error("Add the name the transfer was sent from.");
-        return;
-      }
       if (slip && slip.size > MAX_SLIP_BYTES) {
         toast.error("Payment slips must be smaller than 5MB.");
         return;
@@ -253,13 +251,6 @@ function CheckoutPage() {
         transfer_date: method === "bank_transfer" ? form.transfer_date || undefined : undefined,
       };
 
-      if (method === "bank_transfer" && slip) {
-        payload.slip = {
-          filename: slip.name,
-          content_type: slip.type as NonNullable<PlaceOrderInput["slip"]>["content_type"],
-          data_base64: await readFileAsBase64(slip),
-        };
-      }
 
       const result = await submitOrder({ data: payload });
 
@@ -273,7 +264,12 @@ function CheckoutPage() {
         method,
         waLink,
         slipUploaded: result.slipUploaded,
+        orderAccessToken: result.orderAccessToken,
       });
+      if (method === "bank_transfer" && result.orderAccessToken) {
+        try { setBank(await fetchBank({ data: { token: result.orderAccessToken } })); }
+        catch { toast.error("Order saved. Contact Wendy for payment instructions."); }
+      }
       if (method === "whatsapp") window.open(waLink, "_blank", "noopener");
     } catch (error) {
       toast.error(
@@ -293,6 +289,52 @@ function CheckoutPage() {
           lead="Your date is held once your payment is confirmed. Here is what happens next."
         />
         <Section>
+          {done.method === "bank_transfer" && (
+            <div className="mb-6 rounded-lg border p-5">
+              <h2 className="font-semibold">Bank transfer for order {done.reference}</h2>
+              {bank ? <div className="mt-3 space-y-1 text-sm"><p>{bank.bank_account_name}</p><p>{bank.bank_name}</p><p>Account {bank.bank_account_number}</p><p>{bank.bank_note}</p></div> : <p className="mt-2 text-sm">Payment details unavailable. Contact Wendy and quote your order reference.</p>}
+              <p className="mt-3 text-sm">Your order remains unpaid until the transfer is verified.</p>
+              {done.orderAccessToken && (
+                <form className="mt-4 space-y-3" onSubmit={async (event) => {
+                  event.preventDefault();
+                  if (!slip || busy) { toast.error("Upload your transfer receipt."); return; }
+                  setBusy(true);
+                  try {
+                    await submitProof({ data: {
+                      token: done.orderAccessToken!,
+                      payer_name: form.payer_name,
+                      transfer_reference: form.transfer_reference || undefined,
+                      transfer_date: form.transfer_date || undefined,
+                      slip: {
+                        filename: slip.name,
+                        content_type: slip.type as NonNullable<PlaceOrderInput["slip"]>["content_type"],
+                        data_base64: await readFileAsBase64(slip),
+                      },
+                    } });
+                    setDone((previous) => previous ? { ...previous, slipUploaded: true } : previous);
+                    toast.success("Receipt submitted for verification.");
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : "Could not submit receipt.");
+                  } finally { setBusy(false); }
+                }}>
+                  <p className="text-sm">Upload your receipt after making the transfer.</p>
+                  <label className="block text-sm" htmlFor="post-order-slip">Transfer receipt</label>
+                  <input id="post-order-slip" type="file" accept={ALLOWED_SLIP_TYPES.join(",")}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      if (file && (file.size > MAX_SLIP_BYTES || !ALLOWED_SLIP_TYPES.includes(file.type as never))) {
+                        toast.error("Choose a supported receipt under 5MB."); return;
+                      }
+                      setSlip(file);
+                    }} />
+                  <button type="submit" disabled={busy || done.slipUploaded}
+                    className="rounded-sm bg-primary px-4 py-2 text-sm text-primary-foreground">
+                    {done.slipUploaded ? "Receipt submitted" : busy ? "Submitting…" : "Submit receipt for verification"}
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
           <ol className="max-w-[70ch] space-y-6">
             <li className="border-t border-border pt-5">
               <h2 className="font-display text-xl">
@@ -563,12 +605,7 @@ function CheckoutPage() {
                 </TabsContent>
 
                 <TabsContent value="bank_transfer" className="mt-5 space-y-4">
-                  <div className="rounded-[1rem] bg-secondary p-4 text-sm">
-                    <p className="font-semibold">{bank.bank_account_name}</p>
-                    <p className="text-muted-foreground">{bank.bank_name}</p>
-                    <p className="text-muted-foreground">Account {bank.bank_account_number}</p>
-                    <p className="mt-2 text-xs text-muted-foreground">{bank.bank_note}</p>
-                  </div>
+                  <p className="rounded-lg bg-secondary p-4 text-sm">Bank account details will appear only after your order is saved.</p>
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="payer">Name on the transfer</Label>
@@ -597,37 +634,6 @@ function CheckoutPage() {
                       value={form.transfer_date}
                       onChange={(e) => set("transfer_date", e.target.value)}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="slip">Payment slip (JPG, PNG, WEBP or PDF, max 5MB)</Label>
-                    <div className="flex items-center gap-3">
-                      <Upload className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                      <Input
-                        id="slip"
-                        type="file"
-                        accept={ALLOWED_SLIP_TYPES.join(",")}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] ?? null;
-                          if (!file) return setSlip(null);
-                          if (!ALLOWED_SLIP_TYPES.includes(file.type as never)) {
-                            toast.error("Upload a JPG, PNG, WEBP or PDF.");
-                            e.target.value = "";
-                            return setSlip(null);
-                          }
-                          if (file.size > MAX_SLIP_BYTES) {
-                            toast.error("That file is larger than 5MB.");
-                            e.target.value = "";
-                            return setSlip(null);
-                          }
-                          setSlip(file);
-                        }}
-                      />
-                    </div>
-                    {slip && (
-                      <p className="text-xs text-muted-foreground">
-                        {slip.name} · {(slip.size / 1024 / 1024).toFixed(2)}MB
-                      </p>
-                    )}
                   </div>
                 </TabsContent>
               </Tabs>
@@ -748,7 +754,7 @@ function CheckoutPage() {
                     ? `Pay ${totals ? formatMoney(totals.due_now_cents) : "by card"} securely`
                     : method === "whatsapp"
                       ? "Place order & chat"
-                      : "Place order & submit slip"}
+                      : "Place order & continue to payment"}
               </button>
               <p className="mt-3 text-xs text-muted-foreground">
                 {method === "card"
