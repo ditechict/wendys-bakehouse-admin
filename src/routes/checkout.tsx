@@ -15,7 +15,7 @@ import {
   formatMoney,
   FALLBACK_SETTINGS,
 } from "@/lib/shop";
-import { placeOrder, previewCart, type PlaceOrderInput } from "@/lib/orders.functions";
+import { placeOrder, previewCart, submitTransferProof, type PlaceOrderInput } from "@/lib/orders.functions";
 import { getBankDetails } from "@/lib/catalog.functions";
 import type { BankDetails } from "@/lib/shop";
 import { cardPaymentsEnabled, startCardPayment } from "@/lib/payments.functions";
@@ -73,6 +73,7 @@ type Receipt = {
   method: PayMethod;
   waLink: string;
   slipUploaded: boolean;
+  orderAccessToken: string | null;
 };
 
 type SubmittedOrder = {
@@ -95,6 +96,7 @@ type SubmittedOrder = {
 function CheckoutPage() {
   const { items, clear } = useCart();
   const submitOrder = useServerFn(placeOrder);
+  const submitProof = useServerFn(submitTransferProof);
   const payByCard = useServerFn(startCardPayment);
   const checkCard = useServerFn(cardPaymentsEnabled);
   const { data: catalog } = useQuery(catalogQueryOptions);
@@ -262,6 +264,7 @@ function CheckoutPage() {
         method,
         waLink,
         slipUploaded: result.slipUploaded,
+        orderAccessToken: result.orderAccessToken,
       });
       if (method === "bank_transfer" && result.orderAccessToken) {
         try { setBank(await fetchBank({ data: { token: result.orderAccessToken } })); }
@@ -291,6 +294,45 @@ function CheckoutPage() {
               <h2 className="font-semibold">Bank transfer for order {done.reference}</h2>
               {bank ? <div className="mt-3 space-y-1 text-sm"><p>{bank.bank_account_name}</p><p>{bank.bank_name}</p><p>Account {bank.bank_account_number}</p><p>{bank.bank_note}</p></div> : <p className="mt-2 text-sm">Payment details unavailable. Contact Wendy and quote your order reference.</p>}
               <p className="mt-3 text-sm">Your order remains unpaid until the transfer is verified.</p>
+              {done.orderAccessToken && (
+                <form className="mt-4 space-y-3" onSubmit={async (event) => {
+                  event.preventDefault();
+                  if (!slip || busy) { toast.error("Upload your transfer receipt."); return; }
+                  setBusy(true);
+                  try {
+                    await submitProof({ data: {
+                      token: done.orderAccessToken!,
+                      payer_name: form.payer_name,
+                      transfer_reference: form.transfer_reference || undefined,
+                      transfer_date: form.transfer_date || undefined,
+                      slip: {
+                        filename: slip.name,
+                        content_type: slip.type as NonNullable<PlaceOrderInput["slip"]>["content_type"],
+                        data_base64: await readFileAsBase64(slip),
+                      },
+                    } });
+                    setDone((previous) => previous ? { ...previous, slipUploaded: true } : previous);
+                    toast.success("Receipt submitted for verification.");
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : "Could not submit receipt.");
+                  } finally { setBusy(false); }
+                }}>
+                  <p className="text-sm">Upload your receipt after making the transfer.</p>
+                  <label className="block text-sm" htmlFor="post-order-slip">Transfer receipt</label>
+                  <input id="post-order-slip" type="file" accept={ALLOWED_SLIP_TYPES.join(",")}
+                    onChange={(event) => {
+                      const file = event.target.files?.[0] ?? null;
+                      if (file && (file.size > MAX_SLIP_BYTES || !ALLOWED_SLIP_TYPES.includes(file.type as never))) {
+                        toast.error("Choose a supported receipt under 5MB."); return;
+                      }
+                      setSlip(file);
+                    }} />
+                  <button type="submit" disabled={busy || done.slipUploaded}
+                    className="rounded-sm bg-primary px-4 py-2 text-sm text-primary-foreground">
+                    {done.slipUploaded ? "Receipt submitted" : busy ? "Submitting…" : "Submit receipt for verification"}
+                  </button>
+                </form>
+              )}
             </div>
           )}
           <ol className="max-w-[70ch] space-y-6">
