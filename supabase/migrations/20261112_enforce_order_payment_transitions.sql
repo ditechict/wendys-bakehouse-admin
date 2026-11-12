@@ -5,8 +5,11 @@ returns trigger language plpgsql set search_path = public as $$
 declare allowed boolean := false;
 begin
   if tg_op = 'INSERT' then
-    if new.checkout_method = 'bank_transfer' and new.payment_status <> 'not_paid' then
-      raise exception 'Bank transfer orders must start unpaid';
+    if new.checkout_method in ('bank_transfer', 'whatsapp') and new.payment_status <> 'not_paid' then
+      raise exception 'Non-card orders must start unpaid';
+    end if;
+    if new.checkout_method not in ('bank_transfer', 'whatsapp', 'card') then
+      raise exception 'Unknown checkout method';
     end if;
     if new.checkout_method = 'card' and new.payment_status <> 'pending' then
       raise exception 'Card orders must start pending';
