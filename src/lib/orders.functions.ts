@@ -1,6 +1,5 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { randomUUID } from "node:crypto";
 import {
   itemSchema,
   orderSchema,
@@ -151,7 +150,7 @@ export const submitTransferProof = createServerFn({ method: "POST" })
         order.payment_status !== "not_paid") throw new Error("Payment evidence cannot be submitted for this order.");
     const bytes = decodeBase64(data.slip.data_base64);
     if (bytes.byteLength > MAX_SLIP_BYTES) throw new Error("Payment slip is too large.");
-    const path = id + "/slip-" + randomUUID() + "." + SLIP_EXTENSIONS[data.slip.content_type];
+    const path = id + "/slip-" + crypto.randomUUID() + "." + SLIP_EXTENSIONS[data.slip.content_type];
     const { error: uploadError } = await supabaseAdmin.storage.from("payment-slips")
       .upload(path, bytes, { contentType: data.slip.content_type, upsert: false });
     if (uploadError) throw new Error("Payment evidence could not be uploaded.");
