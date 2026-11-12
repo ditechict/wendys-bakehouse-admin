@@ -316,12 +316,13 @@ function CheckoutPage() {
                   } finally { setBusy(false); }
                 }}>
                   <p className="text-sm">Upload your receipt after making the transfer.</p>
-                  <label className="block text-sm" htmlFor="post-order-slip">Transfer receipt</label>
+                  <label className="block text-sm" htmlFor="post-order-slip">Upload receipt image (JPG, PNG, WebP or HEIC)</label>
+                  <p className="text-sm text-muted-foreground">Image receipts are accepted. Verification of image files may take a little extra time before payment confirmation.</p>
                   <input id="post-order-slip" type="file" accept={ALLOWED_SLIP_TYPES.join(",")}
                     onChange={(event) => {
                       const file = event.target.files?.[0] ?? null;
                       if (file && (file.size > MAX_SLIP_BYTES || !ALLOWED_SLIP_TYPES.includes(file.type as never))) {
-                        toast.error("Choose a supported receipt under 5MB."); return;
+                        toast.error("Choose a JPG, PNG, WebP or HEIC image under 5MB."); return;
                       }
                       setSlip(file);
                     }} />
