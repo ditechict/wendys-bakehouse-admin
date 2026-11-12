@@ -32,7 +32,6 @@ const ALLOWED_SLIP_TYPES = [
   "image/png",
   "image/webp",
   "image/heic",
-  "application/pdf",
 ] as const;
 
 export const Route = createFileRoute("/checkout")({
