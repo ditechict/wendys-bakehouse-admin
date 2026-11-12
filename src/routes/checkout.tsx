@@ -2,7 +2,7 @@ import { useState } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useServerFn } from "@tanstack/react-start";
 import { useQuery } from "@tanstack/react-query";
-import { MessageCircle, Landmark, Upload, CreditCard } from "lucide-react";
+import { MessageCircle, Landmark, CreditCard } from "lucide-react";
 import { toast } from "sonner";
 import { PageHeader, Section } from "@/components/site/Bits";
 import { Input } from "@/components/ui/input";
@@ -634,37 +634,6 @@ function CheckoutPage() {
                       value={form.transfer_date}
                       onChange={(e) => set("transfer_date", e.target.value)}
                     />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="slip">Payment slip (JPG, PNG, WEBP or PDF, max 5MB)</Label>
-                    <div className="flex items-center gap-3">
-                      <Upload className="h-4 w-4 text-muted-foreground" aria-hidden="true" />
-                      <Input
-                        id="slip"
-                        type="file"
-                        accept={ALLOWED_SLIP_TYPES.join(",")}
-                        onChange={(e) => {
-                          const file = e.target.files?.[0] ?? null;
-                          if (!file) return setSlip(null);
-                          if (!ALLOWED_SLIP_TYPES.includes(file.type as never)) {
-                            toast.error("Upload a JPG, PNG, WEBP or PDF.");
-                            e.target.value = "";
-                            return setSlip(null);
-                          }
-                          if (file.size > MAX_SLIP_BYTES) {
-                            toast.error("That file is larger than 5MB.");
-                            e.target.value = "";
-                            return setSlip(null);
-                          }
-                          setSlip(file);
-                        }}
-                      />
-                    </div>
-                    {slip && (
-                      <p className="text-xs text-muted-foreground">
-                        {slip.name} · {(slip.size / 1024 / 1024).toFixed(2)}MB
-                      </p>
-                    )}
                   </div>
                 </TabsContent>
               </Tabs>
