@@ -9,7 +9,6 @@ export const SLIP_CONTENT_TYPES = [
   "image/png",
   "image/webp",
   "image/heic",
-  "application/pdf",
 ] as const;
 
 export const SLIP_EXTENSIONS = {
@@ -17,7 +16,6 @@ export const SLIP_EXTENSIONS = {
   "image/png": "png",
   "image/webp": "webp",
   "image/heic": "heic",
-  "application/pdf": "pdf",
 } as const;
 
 export const itemSchema = z.object({
@@ -71,7 +69,6 @@ export const orderSchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional()
     .or(z.literal("")),
-  slip: slipSchema.optional(),
 });
 
 export const cardOrderSchema = z.object(customerFields);

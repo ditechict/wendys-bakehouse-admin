@@ -9,6 +9,10 @@ function signingKey(): string {
   return secret;
 }
 
+export function assertOrderAccessConfigured(): void {
+  signingKey();
+}
+
 export function issueOrderAccess(orderId: string): string {
   const payload = Buffer.from(JSON.stringify({
     id: orderId, exp: Date.now() + TTL_MS, nonce: randomBytes(16).toString("hex"),
@@ -20,6 +24,7 @@ export function issueOrderAccess(orderId: string): string {
 export function verifyOrderAccess(token: string): string | null {
   if (token.length > 1024 || !/^[A-Za-z0-9_-]+\.[A-Za-z0-9_-]+$/.test(token)) return null;
   const [payload, signature] = token.split(".");
+  if (!payload || !signature) return null;
   const expected = createHmac("sha256", signingKey()).update(payload).digest();
   const supplied = Buffer.from(signature, "base64url");
   if (supplied.length !== expected.length || !timingSafeEqual(supplied, expected)) return null;

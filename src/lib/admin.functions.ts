@@ -190,7 +190,7 @@ export const adminUpdateOrder = createServerFn({ method: "POST" })
 
     const { data: current, error: readError } = await db
       .from("orders")
-      .select("status, payment_status, payment_provider, stripe_session_id")
+      .select("status, payment_status, payment_provider, stripe_session_id, slip_path, checkout_method")
       .eq("id", data.id)
       .single();
     if (readError || !current) throw new Error("That order no longer exists.");
@@ -212,6 +212,10 @@ export const adminUpdateOrder = createServerFn({ method: "POST" })
     if (data.payment_status && data.payment_status !== current.payment_status) {
       if (stripeManaged) {
         throw new Error("Stripe payment status is updated automatically by its webhook.");
+      }
+      if (data.payment_status === "paid" && current.checkout_method === "bank_transfer" &&
+          (current.payment_status !== "pending_verification" || !current.slip_path)) {
+        throw new Error("Bank transfers require uploaded evidence and pending verification before approval.");
       }
       if (!nextPaymentStatuses(current.payment_status).includes(data.payment_status)) {
         throw new Error(

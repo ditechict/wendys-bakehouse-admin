@@ -16,8 +16,8 @@ import {
   FALLBACK_SETTINGS,
 } from "@/lib/shop";
 import { placeOrder, previewCart, submitTransferProof, type PlaceOrderInput } from "@/lib/orders.functions";
+import type { SLIP_CONTENT_TYPES } from "@/lib/order-schemas";
 import { getBankDetails } from "@/lib/catalog.functions";
-import type { BankDetails } from "@/lib/shop";
 import { cardPaymentsEnabled, startCardPayment } from "@/lib/payments.functions";
 
 type PayMethod = "whatsapp" | "bank_transfer" | "card";
@@ -32,7 +32,6 @@ const ALLOWED_SLIP_TYPES = [
   "image/png",
   "image/webp",
   "image/heic",
-  "application/pdf",
 ] as const;
 
 export const Route = createFileRoute("/checkout")({
@@ -102,7 +101,7 @@ function CheckoutPage() {
   const { data: catalog } = useQuery(catalogQueryOptions);
   const settings = catalog?.settings ?? FALLBACK_SETTINGS;
   const fetchBank = useServerFn(getBankDetails);
-  const [bank, setBank] = useState<BankDetails | null>(null);
+  const [bank, setBank] = useState<Awaited<ReturnType<typeof fetchBank>> | null>(null);
   const { data: cardState } = useQuery({
     queryKey: ["card-payments-enabled"],
     queryFn: () => checkCard({}),
@@ -307,7 +306,7 @@ function CheckoutPage() {
                       transfer_date: form.transfer_date || undefined,
                       slip: {
                         filename: slip.name,
-                        content_type: slip.type as NonNullable<PlaceOrderInput["slip"]>["content_type"],
+                        content_type: slip.type as (typeof SLIP_CONTENT_TYPES)[number],
                         data_base64: await readFileAsBase64(slip),
                       },
                     } });
@@ -318,12 +317,13 @@ function CheckoutPage() {
                   } finally { setBusy(false); }
                 }}>
                   <p className="text-sm">Upload your receipt after making the transfer.</p>
-                  <label className="block text-sm" htmlFor="post-order-slip">Transfer receipt</label>
+                  <label className="block text-sm" htmlFor="post-order-slip">Upload receipt image (JPG, PNG, WebP or HEIC)</label>
+                  <p className="text-sm text-muted-foreground">Image receipts are accepted. Verification of image files may take a little extra time before payment confirmation.</p>
                   <input id="post-order-slip" type="file" accept={ALLOWED_SLIP_TYPES.join(",")}
                     onChange={(event) => {
                       const file = event.target.files?.[0] ?? null;
                       if (file && (file.size > MAX_SLIP_BYTES || !ALLOWED_SLIP_TYPES.includes(file.type as never))) {
-                        toast.error("Choose a supported receipt under 5MB."); return;
+                        toast.error("Choose a JPG, PNG, WebP or HEIC image under 5MB."); return;
                       }
                       setSlip(file);
                     }} />
