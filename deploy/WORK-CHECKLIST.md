@@ -1,3 +1,17 @@
+# Payment follow-up validation — 24 November 2026
+
+Scope for this validation is ditechict/wendys-bakehouse-admin. The owner instructed proceeding with baseline build/type checks and a payment follow-up PR. Historical release notes below retain their original scope and dates.
+
+- Baseline main c53855708be80f8caeaa23481590b6c26fed2ce9: frozen Bun 1.4.5 install passed. Vercel-target build passed under Node 24.22.3 using VERCEL=1 bun run build. TypeScript failed with four diagnostics: missing assertOrderAccessConfigured export and three unchecked token-part diagnostics. The build left src/routeTree.gen.ts unchanged. No live environment secrets were supplied.
+- Follow-up started at c37beeeeca74749e5a5e0915c80127b4cb7537df. Its three remaining TypeScript diagnostics were resolved by guarding missing payload/signature parts. Validated application code is commit 84e5c5a67f122ad49150c4051499259b93fcbdff. TypeScript and Vercel-target build passed with no generated route-tree diff. Local validation does not establish a remote deployment build result.
+- Direct execution of order-access.server.ts passed signed-token round trip, malformed/oversized inputs, invalid signatures, tampered payload, expired/excess-lifetime tokens, invalid order ID, and missing/short signing-key checks.
+- Existing scripts/test-pricing-reconciliation.mjs passed all 13 cases. scripts/test-catalog-reconciliation.mjs and scripts/test-release-audit.mjs passed. These checks do not exercise live payment storage or database triggers.
+- Connected isolated Supabase project zwvyzfsfvfffvcfrumfa (wendys-bakehouse-staging) reports INACTIVE. The isolated Vercel project has SSO protection on all deployments. Live receipt upload, anonymous storage denial, order capability enforcement, and payment transition checks remain pending. Migration comments claiming earlier application are historical claims and were not reverified against the paused database.
+- The follow-up contains two SQL definitions of enforce_order_payment_transition with differing transition rules. Reconcile the review SQL with the intended migration before applying either in a new environment. No SQL was applied during this validation.
+- Next action: review the draft follow-up PR and complete isolated staging verification when the staging database is available. Merge and production publication remain pending.
+
+---
+
 # Wendy’s Bakehouse — authoritative work checklist
 
 Updated: 18 October 2026, release in progress after the owner paused further uploads and explicitly instructed shipping and visibility for all uploaded products (18:07 Lagos).
